@@ -5,3 +5,7 @@ sqlalchemy
 psycopg[binary]
 pydantic-settings
 email-validator
+
+# Phase 1: database models & migrations
+pgvector
+alembic
