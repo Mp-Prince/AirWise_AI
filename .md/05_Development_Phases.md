@@ -1,9 +1,9 @@
 # AirWise AI — Development Phases
 
-**Approach:** Build a working vertical slice in small phases.  
-**Frontend:** React + Bootstrap 5 responsive web application / PWA  
-**Backend:** Python + FastAPI using a project-local `.venv` virtual environment  
-**Database:** PostgreSQL + pgvector  
+**Approach:** Build a working vertical slice in small phases.
+**Frontend:** React + Bootstrap 5 responsive web application / PWA
+**Backend:** Python + FastAPI using a project-local `.venv` virtual environment
+**Database:** PostgreSQL + pgvector
 **AI:** LLM + RAG
 
 ## 1. Development strategy
@@ -51,16 +51,19 @@ python -m venv .venv
 Activate it:
 
 **Windows PowerShell**
+
 ```powershell
 .venv\\Scripts\\Activate.ps1
 ```
 
 **Windows Command Prompt**
+
 ```bat
 .venv\\Scripts\\activate.bat
 ```
 
 **macOS / Linux**
+
 ```bash
 source .venv/bin/activate
 ```
@@ -74,6 +77,7 @@ This `venv` requirement is the current project instruction and takes precedence 
 ### Phase 0 — Scope and project setup
 
 **Tasks**
+
 - Confirm MVP requirements.
 - Confirm technology versions.
 - Create repository.
@@ -82,12 +86,14 @@ This `venv` requirement is the current project instruction and takes precedence 
 - Create wireframes and design tokens.
 
 **Deliverables**
+
 - Approved feature list.
 - UI/UX reference.
 - Initial project repository.
 - Development setup guide.
 
 **Acceptance criteria**
+
 - Team agrees on what is included in MVP.
 - Web app starts locally.
 - Bootstrap theme and responsive shell are visible.
@@ -95,6 +101,7 @@ This `venv` requirement is the current project instruction and takes precedence 
 ### Phase 1 — Database design
 
 **Tasks**
+
 - Finalize ER diagram.
 - Define tables, keys and constraints.
 - Decide location and pollutant units.
@@ -103,12 +110,14 @@ This `venv` requirement is the current project instruction and takes precedence 
 - Plan migrations and seed data.
 
 **Deliverables**
+
 - Database schema.
 - ER diagram.
 - Migration plan.
 - Sample data.
 
 **Acceptance criteria**
+
 - User, profile and family relationships work.
 - Environmental readings preserve provider and timestamps.
 - Impact records retain calculation assumptions.
@@ -116,6 +125,7 @@ This `venv` requirement is the current project instruction and takes precedence 
 ### Phase 2 — Authentication and user onboarding
 
 **Tasks**
+
 - Registration and login.
 - Secure password hashing.
 - Token/session handling.
@@ -125,11 +135,13 @@ This `venv` requirement is the current project instruction and takes precedence 
 - Optional family setup entry point.
 
 **Deliverables**
+
 - Working authentication.
 - Onboarding screens.
 - User profile APIs.
 
 **Acceptance criteria**
+
 - User can register, log in and log out.
 - User can update location and preferences.
 - Protected endpoints reject unauthenticated requests.
@@ -137,6 +149,7 @@ This `venv` requirement is the current project instruction and takes precedence 
 ### Phase 3 — Environmental data integration
 
 **Tasks**
+
 - Select official Indian AQI data integration.
 - Evaluate OpenAQ supplementary coverage.
 - Integrate weather provider.
@@ -146,11 +159,13 @@ This `venv` requirement is the current project instruction and takes precedence 
 - Implement cache and provider error handling.
 
 **Deliverables**
+
 - Environmental data service.
 - Dashboard AQI and weather cards.
 - Provider status and freshness labels.
 
 **Acceptance criteria**
+
 - Supported locations display sourced readings.
 - Missing data is not represented as zero.
 - Stale data is clearly identified.
@@ -159,6 +174,7 @@ This `venv` requirement is the current project instruction and takes precedence 
 ### Phase 4 — RAG knowledge base
 
 **Tasks**
+
 - Collect trusted environmental documents.
 - Review source and publication dates.
 - Extract PDF/web text.
@@ -170,12 +186,14 @@ This `venv` requirement is the current project instruction and takes precedence 
 - Test retrieval with a fixed question set.
 
 **Deliverables**
+
 - Initial knowledge base.
 - Document ingestion process.
 - Retrieval service.
 - Source citation metadata.
 
 **Acceptance criteria**
+
 - Relevant questions retrieve relevant document passages.
 - Source and page references can be returned.
 - Untrusted or outdated documents can be disabled.
@@ -184,6 +202,7 @@ This `venv` requirement is the current project instruction and takes precedence 
 ### Phase 5 — LLM assistant
 
 **Tasks**
+
 - Connect chosen LLM provider.
 - Create grounded system prompts.
 - Combine user context, AQI context and RAG passages.
@@ -194,11 +213,13 @@ This `venv` requirement is the current project instruction and takes precedence 
 - Add rate limits and cost monitoring.
 
 **Deliverables**
+
 - Working AI chat page.
 - Backend assistant endpoint.
 - Structured recommendation response.
 
 **Acceptance criteria**
+
 - Assistant answers with relevant evidence.
 - It admits when data or evidence is missing.
 - It does not invent live readings or impact values.
@@ -207,6 +228,7 @@ This `venv` requirement is the current project instruction and takes precedence 
 ### Phase 6 — Recommendation and daily planner
 
 **Tasks**
+
 - Define recommendation categories.
 - Implement safety-related deterministic rules.
 - Generate personalized sustainable actions.
@@ -215,11 +237,13 @@ This `venv` requirement is the current project instruction and takes precedence 
 - Allow suitable recommendations to be added to the planner.
 
 **Deliverables**
+
 - Recommendation page.
 - Daily Planner page.
 - Add/Edit Event modal.
 
 **Acceptance criteria**
+
 - User can create and manage events.
 - AI recommendations are relevant to user preferences.
 - Events persist after refresh.
@@ -228,6 +252,7 @@ This `venv` requirement is the current project instruction and takes precedence 
 ### Phase 7 — Environmental impact engine
 
 **Tasks**
+
 - Select reliable emission-factor references.
 - Define units and calculation boundaries.
 - Implement transport calculations.
@@ -236,11 +261,13 @@ This `venv` requirement is the current project instruction and takes precedence 
 - Build impact summaries and charts.
 
 **Deliverables**
+
 - Impact calculator.
 - Impact Tracker page.
 - Calculation detail view.
 
 **Acceptance criteria**
+
 - Calculations are reproducible.
 - Assumptions and source are visible.
 - Estimates are labelled as estimates.
@@ -249,6 +276,7 @@ This `venv` requirement is the current project instruction and takes precedence 
 ### Phase 8 — Family functionality
 
 **Tasks**
+
 - Create family groups.
 - Generate invitations.
 - Join/leave family.
@@ -258,11 +286,13 @@ This `venv` requirement is the current project instruction and takes precedence 
 - Implement backend authorization tests.
 
 **Deliverables**
+
 - Family dashboard.
 - Invitation flow.
 - Shared goals and progress.
 
 **Acceptance criteria**
+
 - Unauthorized users cannot access family information.
 - Private chat history stays private.
 - Family progress uses only permitted shared records.
@@ -270,6 +300,7 @@ This `venv` requirement is the current project instruction and takes precedence 
 ### Phase 9 — Responsive frontend completion / PWA
 
 **Tasks**
+
 - Complete dashboard.
 - Complete AI Assistant.
 - Complete Recommendations.
@@ -280,10 +311,12 @@ This `venv` requirement is the current project instruction and takes precedence 
 - Add accessible loading, empty and error states.
 
 **Deliverables**
+
 - Responsive web application.
 - Optional installable PWA.
 
 **Acceptance criteria**
+
 - Core journeys work on narrow mobile screens.
 - Navigation is usable with touch and keyboard.
 - Offline mode never presents stale AQI as live.
@@ -291,6 +324,7 @@ This `venv` requirement is the current project instruction and takes precedence 
 ### Phase 10 — Testing, deployment and demonstration
 
 **Tasks**
+
 - Unit tests.
 - API integration tests.
 - Database tests.
@@ -302,12 +336,14 @@ This `venv` requirement is the current project instruction and takes precedence 
 - Demo data and presentation preparation.
 
 **Deliverables**
+
 - Deployed MVP.
 - Test report.
 - Demo script.
 - Known limitations list.
 
 **Acceptance criteria**
+
 - Main user journey works end-to-end.
 - Provider failures are handled gracefully.
 - No critical access-control issues remain.
@@ -317,15 +353,15 @@ This `venv` requirement is the current project instruction and takes precedence 
 
 Apply this gate at the end of **every** phase, including Phase 0 and Phase 10. The phase is not considered closed until the user confirms that the changes have been committed and pushed.
 
-| Gate | Required action |
-|---|---|
-| 1. Verify | Run phase-specific tests, linting/type checks where configured, and a basic manual smoke test. |
-| 2. Review | Summarize completed work, changed files, test results, and known issues. |
-| 3. Protect | Check `git status`; ensure `.env`, `backend/.venv/`, credentials, API keys, and generated files are not staged. |
-| 4. Prepare | Suggest a clear phase-specific commit message and show the exact Git commands. |
-| 5. Ask | Ask the user to commit and push the phase to their GitHub repository. |
-| 6. Pause | Stop all implementation work and wait for explicit confirmation of a successful push. |
-| 7. Continue | Only after confirmation, start the next phase. |
+| Gate        | Required action                                                                                                       |
+| ----------- | --------------------------------------------------------------------------------------------------------------------- |
+| 1. Verify   | Run phase-specific tests, linting/type checks where configured, and a basic manual smoke test.                        |
+| 2. Review   | Summarize completed work, changed files, test results, and known issues.                                              |
+| 3. Protect  | Check `git status`; ensure `.env`, `backend/.venv/`, credentials, API keys, and generated files are not staged. |
+| 4. Prepare  | Suggest a clear phase-specific commit message and show the exact Git commands.                                        |
+| 5. Ask      | Ask the user to commit and push the phase to their GitHub repository.                                                 |
+| 6. Pause    | Stop all implementation work and wait for explicit confirmation of a successful push.                                 |
+| 7. Continue | Only after confirmation, start the next phase.                                                                        |
 
 Suggested commit messages:
 
@@ -346,6 +382,7 @@ The user may choose a different commit message. Never claim a commit or push suc
 ## 4. Recommended MVP cut line
 
 ### Must have
+
 1. Registration/login.
 2. User profile and city selection.
 3. AQI and weather dashboard.
@@ -356,6 +393,7 @@ The user may choose a different commit message. Never claim a commit or push suc
 8. Impact summary.
 
 ### Should have
+
 1. Family group creation and invitations.
 2. Shared family goals.
 3. Historical AQI chart.
@@ -363,6 +401,7 @@ The user may choose a different commit message. Never claim a commit or push suc
 5. PWA installation.
 
 ### Could have
+
 1. Community challenges.
 2. Advanced notification rules.
 3. Multilingual assistant.
@@ -396,17 +435,18 @@ flowchart TD
 
 If time is limited, use this sequence rather than attempting every phase:
 
-| Sprint | Focus | Demonstrable result |
-|---|---|---|
-| Sprint 1 | Setup, database, authentication | User can register and save profile |
-| Sprint 2 | AQI integration and dashboard | User sees sourced local air-quality data |
-| Sprint 3 | RAG and AI | User receives grounded recommendations |
-| Sprint 4 | Planner and impact calculator | User records an action and sees an estimate |
-| Sprint 5 | Responsive polish and demo | End-to-end mobile-friendly web MVP |
+| Sprint   | Focus                           | Demonstrable result                         |
+| -------- | ------------------------------- | ------------------------------------------- |
+| Sprint 1 | Setup, database, authentication | User can register and save profile          |
+| Sprint 2 | AQI integration and dashboard   | User sees sourced local air-quality data    |
+| Sprint 3 | RAG and AI                      | User receives grounded recommendations      |
+| Sprint 4 | Planner and impact calculator   | User records an action and sees an estimate |
+| Sprint 5 | Responsive polish and demo      | End-to-end mobile-friendly web MVP          |
 
 ## 7. Definition of done for every phase
 
 A phase is complete only when:
+
 - Code is integrated into the main branch.
 - Basic tests pass.
 - Errors and empty states are handled.
@@ -414,7 +454,6 @@ A phase is complete only when:
 - No secrets are committed.
 - UI works on mobile and desktop where relevant.
 - Known limitations are documented.
-
 
 ## 8. Required phase handoff message
 

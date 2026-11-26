@@ -1,22 +1,27 @@
 """Application settings loaded from backend/.env (never committed)."""
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Explicitly point to backend/.env regardless of working directory
+BACKEND_ENV = Path(__file__).resolve().parents[2] / ".env"
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env", env_file_encoding="utf-8", extra="ignore"
+        env_file=str(BACKEND_ENV), env_file_encoding="utf-8", extra="ignore"
     )
 
-    APP_NAME: str = "AirWise AI"
-    APP_ENV: str = "development"
-    API_V1_PREFIX: str = "/api/v1"
-    DATABASE_URL: str = "postgresql+psycopg://postgres:postgres@localhost:5432/airwise_ai"
-    SECRET_KEY: str = "change-me"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
-    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
-    CORS_ORIGINS: str = "http://localhost:5173"
+    # All values loaded from backend/.env — no hardcoded defaults
+    APP_NAME: str
+    APP_ENV: str
+    API_V1_PREFIX: str
+    DATABASE_URL: str
+    SECRET_KEY: str
+    ACCESS_TOKEN_EXPIRE_MINUTES: int
+    REFRESH_TOKEN_EXPIRE_DAYS: int
+    CORS_ORIGINS: str
 
     # External providers — keys stay server-side only (Phase 3+)
     OPENAQ_API_KEY: str = ""

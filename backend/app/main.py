@@ -7,6 +7,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
+from app.modules.users.module import router as auth_router
+
+# Import all model modules to register them with SQLAlchemy
+import app.modules.users.repository
+import app.modules.user_profiles.repository
 
 settings = get_settings()
 
@@ -23,6 +28,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount auth router
+app.include_router(auth_router, prefix=settings.API_V1_PREFIX)
 
 
 @app.get("/", tags=["health"])

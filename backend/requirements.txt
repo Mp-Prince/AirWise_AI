@@ -9,3 +9,7 @@ email-validator
 # Phase 1: database models & migrations
 pgvector
 alembic
+
+# Phase 2: authentication
+passlib[bcrypt]
+python-jose[cryptography]
