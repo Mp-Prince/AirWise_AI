@@ -155,13 +155,20 @@ async def login(
     )
 
 
+from pydantic import BaseModel
+
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
+
+
 @router.post("/refresh", response_model=Token)
 async def refresh_token(
-    refresh_token: str,
+    request: RefreshTokenRequest,
     session: Annotated[AsyncSession, Depends(get_async_session)],
 ):
     """Refresh access token using refresh token."""
-    token_data = verify_token(refresh_token, "refresh")
+    token_data = verify_token(request.refresh_token, "refresh")
     user_service = UserService(session)
     user = await user_service.get_by_id(token_data.sub)
     if not user or not user.is_active:
