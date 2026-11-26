@@ -1,0 +1,41 @@
+/* Responsive rules — mobile-first, Bootstrap breakpoints used in markup.
+   Desktop  (>=992px):  persistent sidebar
+   Tablet   (576–991px): sidebar hidden, offcanvas menu
+   Mobile   (<576px):   top navbar + offcanvas, single-column cards
+*/
+
+/* Hide the persistent sidebar below the lg breakpoint */
+.aw-sidebar {
+  display: none;
+}
+
+@media (min-width: 992px) {
+  .aw-sidebar {
+    display: flex;
+  }
+  .aw-topbar-toggle {
+    display: none;
+  }
+  .aw-content {
+    padding: 1.5rem;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .aw-content {
+    padding: 1rem;
+  }
+  /* Full-width primary buttons on small screens when useful */
+  .btn-block-mobile {
+    display: block;
+    width: 100%;
+  }
+}
+
+/* AQI category styles: colour plus a text badge — never colour alone */
+.aqi-value-display {
+  font-size: clamp(2.5rem, 7vw, 3.75rem);
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}

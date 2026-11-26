@@ -1,0 +1,112 @@
+/* Application shell: sidebar (desktop) + navbar (mobile) + content area */
+
+.aw-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.aw-sidebar {
+  width: var(--aw-sidebar-width);
+  flex: 0 0 var(--aw-sidebar-width);
+  background-color: var(--aw-surface);
+  border-right: var(--aw-border);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.aw-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 1rem 1.1rem;
+  border-bottom: var(--aw-border);
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: var(--aw-primary-dark);
+  text-decoration: none;
+}
+
+.aw-brand img,
+.aw-brand svg {
+  width: 30px;
+  height: 30px;
+}
+
+.aw-nav {
+  padding: 0.75rem 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.aw-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--aw-radius);
+  color: var(--aw-text);
+  text-decoration: none;
+  font-weight: 500;
+  min-height: 44px; /* comfortable touch target */
+}
+
+.aw-nav-link:hover {
+  background-color: rgba(23, 107, 91, 0.08);
+  color: var(--aw-primary-dark);
+}
+
+.aw-nav-link.active {
+  background-color: var(--aw-primary);
+  color: #fff;
+}
+
+.aw-nav-link i {
+  font-size: 1.1rem;
+  width: 1.3rem;
+  text-align: center;
+}
+
+.aw-main {
+  flex: 1 1 auto;
+  min-width: 0; /* prevent grid blowout from wide children */
+  display: flex;
+  flex-direction: column;
+}
+
+.aw-topbar {
+  background-color: var(--aw-surface);
+  border-bottom: var(--aw-border);
+}
+
+.aw-content {
+  padding: 1.25rem;
+  flex: 1 1 auto;
+}
+
+.aw-footer {
+  border-top: var(--aw-border);
+  background-color: var(--aw-surface);
+}
+
+/* Auth / onboarding pages use a centered card */
+.aw-auth-wrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background:
+    radial-gradient(circle at 15% 15%, rgba(23, 107, 91, 0.10), transparent 45%),
+    radial-gradient(circle at 85% 80%, rgba(47, 111, 159, 0.10), transparent 45%),
+    var(--aw-background);
+}
+
+.aw-auth-card {
+  width: 100%;
+  max-width: 440px;
+}

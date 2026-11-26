@@ -1,0 +1,63 @@
+/* Global typography and element defaults */
+
+body {
+  background-color: var(--aw-background);
+  color: var(--aw-text);
+  font-size: 1rem; /* 16px default per UI/UX spec */
+  min-height: 100vh;
+}
+
+/* Page title ~1.5–2rem, section heading ~1.1–1.25rem */
+.page-title {
+  font-size: clamp(1.5rem, 2.5vw, 2rem);
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+.section-heading {
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.text-supporting {
+  font-size: 0.875rem; /* never below 14px where practical */
+  color: var(--aw-text-muted);
+}
+
+.card {
+  border: var(--aw-border);
+  border-radius: var(--aw-radius);
+  background-color: var(--aw-surface);
+}
+
+.btn-primary {
+  background-color: var(--aw-primary);
+  border-color: var(--aw-primary);
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+  background-color: var(--aw-primary-dark);
+  border-color: var(--aw-primary-dark);
+}
+
+/* Visible keyboard focus everywhere */
+a:focus-visible,
+button:focus-visible,
+.form-control:focus-visible,
+.form-select:focus-visible {
+  outline: 3px solid rgba(47, 111, 159, 0.55);
+  outline-offset: 2px;
+}
+
+/* Respect reduced-motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,0 +1,39 @@
+:root {
+  /* AirWise AI design tokens — see .md/02_UI_UX_Design.md section 2 */
+  --aw-primary: #176b5b;
+  --aw-primary-dark: #104b41;
+  --aw-secondary: #2f6f9f;
+  --aw-accent: #e5a93d;
+  --aw-background: #f5f8f7;
+  --aw-surface: #ffffff;
+  --aw-text: #1f2933;
+  --aw-text-muted: #64748b;
+  --aw-danger: #b42318;
+  --aw-warning: #a15c00;
+  --aw-success: #18794e;
+
+  --aw-sidebar-width: 250px;
+  --aw-radius: 0.5rem;
+  --aw-border: 1px solid rgba(31, 41, 51, 0.12);
+}
+
+/* Map tokens onto Bootstrap's CSS variables so components inherit the theme. */
+:root {
+  --bs-primary: var(--aw-primary);
+  --bs-primary-rgb: 23, 107, 91;
+  --bs-secondary: var(--aw-secondary);
+  --bs-secondary-rgb: 47, 111, 159;
+  --bs-info: var(--aw-secondary);
+  --bs-info-rgb: 47, 111, 159;
+  --bs-warning: var(--aw-warning);
+  --bs-warning-rgb: 161, 92, 0;
+  --bs-danger: var(--aw-danger);
+  --bs-danger-rgb: 180, 35, 24;
+  --bs-success: var(--aw-success);
+  --bs-success-rgb: 24, 121, 78;
+  --bs-body-bg: var(--aw-background);
+  --bs-body-color: var(--aw-text);
+  --bs-border-radius: var(--aw-radius);
+  --bs-link-color: var(--aw-secondary);
+  --bs-link-hover-color: var(--aw-primary-dark);
+}

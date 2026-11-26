@@ -27,12 +27,12 @@ AirWise_AI/
 
 ## Tech stack
 
-| Layer     | Technology                                             |
-|-----------|--------------------------------------------------------|
-| Frontend  | React.js, Bootstrap 5.3, React Router, Axios, TanStack Query, Chart.js |
-| Backend   | Python, FastAPI, Pydantic, SQLAlchemy, `venv`          |
-| Database  | PostgreSQL + pgvector                                  |
-| AI        | LLM + RAG over trusted environmental documents         |
+| Layer    | Technology                                                             |
+| -------- | ---------------------------------------------------------------------- |
+| Frontend | React.js, Bootstrap 5.3, React Router, Axios, TanStack Query, Chart.js |
+| Backend  | Python, FastAPI, Pydantic, SQLAlchemy, `venv`                        |
+| Database | PostgreSQL + pgvector                                                  |
+| AI       | LLM + RAG over trusted environmental documents                         |
 
 > Note: backend environment management uses Python's built-in `venv` with `pip` and
 > `requirements.txt`. This is the current instruction and supersedes the `uv`

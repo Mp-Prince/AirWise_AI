@@ -1,0 +1,7 @@
+# Phase 0 minimal set; auth/crypto deps are added in later phases.
+fastapi[standard]
+uvicorn[standard]
+sqlalchemy
+psycopg[binary]
+pydantic-settings
+email-validator
