@@ -6,6 +6,24 @@
 **Database:** PostgreSQL + pgvector
 **AI:** LLM + RAG
 
+## 📋 Progress Tracking
+
+| Phase | Name | Status | Commit |
+|-------|------|--------|--------|
+| 0 | Scope and project setup | ✅ **COMPLETE** | `657894b`, `2f24ecd` |
+| 1 | Database design | ✅ **COMPLETE** | `4aadd9b` |
+| 2 | Authentication and user onboarding | ✅ **COMPLETE** | `a1a64c7`, `7f77b70` |
+| 3 | Environmental data integration | ⏳ Pending | — |
+| 4 | RAG knowledge base | ⏳ Pending | — |
+| 5 | LLM assistant | ⏳ Pending | — |
+| 6 | Recommendation and daily planner | ⏳ Pending | — |
+| 7 | Environmental impact engine | ⏳ Pending | — |
+| 8 | Family functionality | ⏳ Pending | — |
+| 9 | Responsive frontend completion / PWA | ⏳ Pending | — |
+| 10 | Testing, deployment and demonstration | ⏳ Pending | — |
+
+**Current Phase:** 3 — Environmental data integration
+
 ## 1. Development strategy
 
 Do not build every screen and every backend service independently and integrate everything at the end. Complete each phase with a working, testable result.
