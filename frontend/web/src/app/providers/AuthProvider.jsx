@@ -71,9 +71,13 @@ export function AuthProvider({ children }) {
   const login = useCallback(async (email, password) => {
     setError(null);
     try {
-      const response = await apiClient.post('/auth/login', {
-        username: email,
-        password
+      // OAuth2PasswordRequestForm expects form-encoded data
+      const formData = new URLSearchParams();
+      formData.append('username', email);
+      formData.append('password', password);
+
+      const response = await apiClient.post('/auth/login', formData, {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       });
 
       const { access_token, refresh_token } = response.data;
@@ -87,7 +91,18 @@ export function AuthProvider({ children }) {
 
       return userResponse.data;
     } catch (err) {
-      const message = err.response?.data?.detail || 'Login failed. Please check your credentials.';
+      // Handle different error response formats
+      let message = 'Login failed. Please check your credentials.';
+      if (err.response?.data?.detail) {
+        // FastAPI validation errors are arrays of objects with 'msg' field
+        if (Array.isArray(err.response.data.detail)) {
+          message = err.response.data.detail.map(e => e.msg).join(', ');
+        } else if (typeof err.response.data.detail === 'string') {
+          message = err.response.data.detail;
+        } else if (err.response.data.detail.msg) {
+          message = err.response.data.detail.msg;
+        }
+      }
       setError(message);
       throw err;
     }
@@ -105,7 +120,17 @@ export function AuthProvider({ children }) {
       // After registration, log in automatically
       return await login(email, password);
     } catch (err) {
-      const message = err.response?.data?.detail || 'Registration failed. Please try again.';
+      // Handle different error response formats
+      let message = 'Registration failed. Please try again.';
+      if (err.response?.data?.detail) {
+        if (Array.isArray(err.response.data.detail)) {
+          message = err.response.data.detail.map(e => e.msg).join(', ');
+        } else if (typeof err.response.data.detail === 'string') {
+          message = err.response.data.detail;
+        } else if (err.response.data.detail.msg) {
+          message = err.response.data.detail.msg;
+        }
+      }
       setError(message);
       throw err;
     }

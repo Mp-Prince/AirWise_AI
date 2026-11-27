@@ -1,17 +1,23 @@
 """AirWise AI FastAPI application entry point.
 
 Phase 0: app boot + health check only. Entity module routers
-(app/modules/<entity>/module.py) are mounted as each phase lands them.
+(app/modules/<entity>/routes.py) are mounted as each phase lands them.
 """
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
-from app.modules.users.module import router as auth_router
+from app.modules.users.routes import router as auth_router
+from app.modules.locations.routes import router as locations_router
+from app.modules.air_quality_readings.routes import router as air_quality_router
+from app.modules.weather_readings.routes import router as weather_router
 
 # Import all model modules to register them with SQLAlchemy
-import app.modules.users.repository
-import app.modules.user_profiles.repository
+import app.modules.users.models
+import app.modules.user_profiles.models
+import app.modules.locations.models
+import app.modules.air_quality_readings.models
+import app.modules.weather_readings.models
 
 settings = get_settings()
 
@@ -31,6 +37,10 @@ app.add_middleware(
 
 # Mount auth router
 app.include_router(auth_router, prefix=settings.API_V1_PREFIX)
+# Mount Phase 3 routers
+app.include_router(locations_router, prefix=settings.API_V1_PREFIX)
+app.include_router(air_quality_router, prefix=settings.API_V1_PREFIX)
+app.include_router(weather_router, prefix=settings.API_V1_PREFIX)
 
 
 @app.get("/", tags=["health"])

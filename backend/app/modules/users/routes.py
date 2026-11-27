@@ -1,4 +1,4 @@
-"""User module with authentication routes (Phase 2)."""
+"""User authentication routes (Phase 2)."""
 from datetime import datetime, timedelta
 from typing import Annotated
 from uuid import UUID
@@ -9,7 +9,7 @@ from jose import jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.connection import get_async_session
-from app.modules.users.repository import UserModel
+from app.modules.users.models import UserModel
 from app.modules.users.schema import (
     UserCreate,
     UserResponse,

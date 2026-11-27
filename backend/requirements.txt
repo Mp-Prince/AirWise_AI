@@ -13,3 +13,6 @@ alembic
 # Phase 2: authentication
 passlib[bcrypt]
 python-jose[cryptography]
+
+# Phase 3: Environmental data integration
+httpx

@@ -7,7 +7,7 @@ from passlib.context import CryptContext
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.users.repository import UserModel
+from app.modules.users.models import UserModel
 from app.modules.users.schema import UserCreate, UserUpdate, UserResponse, Token, TokenPayload
 from app.core.config import get_settings
 
