@@ -18,7 +18,7 @@ from app.modules.locations.models import LocationModel
 from app.modules.users.routes import get_current_active_user
 from app.modules.users.models import UserModel
 
-router = APIRouter(prefix="/air-quality", tags=["air-quality"])
+router = APIRouter(tags=["air-quality"])
 
 
 @router.get("/locations/{location_id}/latest", response_model=AirQualityReadingResponse)

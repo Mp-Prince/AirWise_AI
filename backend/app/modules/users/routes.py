@@ -22,7 +22,7 @@ from app.core.config import get_settings
 
 settings = get_settings()
 
-router = APIRouter(prefix="/auth", tags=["auth"])
+router = APIRouter(tags=["auth"])
 
 # JWT settings
 ALGORITHM = "HS256"

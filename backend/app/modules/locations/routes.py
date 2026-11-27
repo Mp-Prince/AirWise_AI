@@ -20,7 +20,7 @@ from app.modules.users.models import UserModel
 from app.modules.air_quality_readings.service import AirQualityService
 from app.modules.weather_readings.service import WeatherService
 
-router = APIRouter(prefix="/locations", tags=["locations"])
+router = APIRouter(tags=["locations"])
 
 
 @router.get("", response_model=LocationListResponse)

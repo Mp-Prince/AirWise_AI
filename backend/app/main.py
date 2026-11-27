@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
 from app.modules.users.routes import router as auth_router
+from app.modules.user_profiles.routes import router as profile_router
 from app.modules.locations.routes import router as locations_router
 from app.modules.air_quality_readings.routes import router as air_quality_router
 from app.modules.weather_readings.routes import router as weather_router
@@ -36,11 +37,13 @@ app.add_middleware(
 )
 
 # Mount auth router
-app.include_router(auth_router, prefix=settings.API_V1_PREFIX)
+app.include_router(auth_router, prefix=settings.API_V1_PREFIX + "/auth")
+# Mount profile router (Phase 2)
+app.include_router(profile_router, prefix=settings.API_V1_PREFIX + "/profile")
 # Mount Phase 3 routers
-app.include_router(locations_router, prefix=settings.API_V1_PREFIX)
-app.include_router(air_quality_router, prefix=settings.API_V1_PREFIX)
-app.include_router(weather_router, prefix=settings.API_V1_PREFIX)
+app.include_router(locations_router, prefix=settings.API_V1_PREFIX + "/locations")
+app.include_router(air_quality_router, prefix=settings.API_V1_PREFIX + "/air-quality")
+app.include_router(weather_router, prefix=settings.API_V1_PREFIX + "/weather")
 
 
 @app.get("/", tags=["health"])

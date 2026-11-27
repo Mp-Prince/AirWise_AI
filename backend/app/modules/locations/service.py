@@ -71,9 +71,16 @@ class LocationService:
         if is_default:
             await self._unset_default_for_user(user_id)
 
+        # Map schema fields (lat/lon) to model fields (latitude/longitude)
+        create_data = location_data.model_dump()
         location = LocationModel(
             user_id=user_id,
-            **location_data.model_dump(),
+            latitude=create_data.get("lat"),
+            longitude=create_data.get("lon"),
+            name=create_data.get("name"),
+            city=create_data.get("city"),
+            state=create_data.get("state"),
+            country=create_data.get("country"),
             is_default=is_default,
         )
         self.session.add(location)
@@ -95,9 +102,15 @@ class LocationService:
         if location_data.is_default is True:
             await self._unset_default_for_user(user_id)
 
+        # Map schema fields (lat/lon) to model fields (latitude/longitude)
         update_data = location_data.model_dump(exclude_unset=True)
+        field_mapping = {
+            "lat": "latitude",
+            "lon": "longitude",
+        }
         for field, value in update_data.items():
-            setattr(location, field, value)
+            model_field = field_mapping.get(field, field)
+            setattr(location, model_field, value)
 
         location.updated_at = datetime.now(timezone.utc)
         await self.session.flush()
@@ -203,8 +216,8 @@ class LocationService:
             {
                 "id": str(loc.id),
                 "name": loc.name,
-                "latitude": float(loc.latitude),
-                "longitude": float(loc.longitude),
+                "lat": float(loc.latitude),
+                "lon": float(loc.longitude),
                 "city": loc.city,
                 "state": loc.state,
                 "country": loc.country,
@@ -224,8 +237,8 @@ class LocationService:
                 {
                     "id": None,
                     "name": r.get("display_name", "").split(",")[0],
-                    "latitude": float(r["lat"]),
-                    "longitude": float(r["lon"]),
+                    "lat": float(r["lat"]),
+                    "lon": float(r["lon"]),
                     "city": r.get("address", {}).get("city")
                         or r.get("address", {}).get("town")
                         or r.get("address", {}).get("village"),
@@ -245,7 +258,7 @@ class LocationService:
         seen = set()
         unique_results = []
         for r in all_results:
-            key = (round(r["latitude"], 4), round(r["longitude"], 4))
+            key = (round(r["lat"], 4), round(r["lon"], 4))
             if key not in seen:
                 seen.add(key)
                 unique_results.append(r)
