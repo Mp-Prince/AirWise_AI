@@ -12,6 +12,8 @@ from app.modules.user_profiles.routes import router as profile_router
 from app.modules.locations.routes import router as locations_router
 from app.modules.air_quality_readings.routes import router as air_quality_router
 from app.modules.weather_readings.routes import router as weather_router
+from app.modules.knowledge_documents.routes import router as knowledge_documents_router
+from app.modules.document_chunks.routes import router as document_chunks_router
 
 # Import all model modules to register them with SQLAlchemy
 import app.modules.users.models
@@ -19,6 +21,8 @@ import app.modules.user_profiles.models
 import app.modules.locations.models
 import app.modules.air_quality_readings.models
 import app.modules.weather_readings.models
+import app.modules.knowledge_documents.models
+import app.modules.document_chunks.models
 
 settings = get_settings()
 
@@ -44,6 +48,9 @@ app.include_router(profile_router, prefix=settings.API_V1_PREFIX + "/profile")
 app.include_router(locations_router, prefix=settings.API_V1_PREFIX + "/locations")
 app.include_router(air_quality_router, prefix=settings.API_V1_PREFIX + "/air-quality")
 app.include_router(weather_router, prefix=settings.API_V1_PREFIX + "/weather")
+# Mount Phase 4 routers
+app.include_router(knowledge_documents_router, prefix=settings.API_V1_PREFIX + "/knowledge")
+app.include_router(document_chunks_router, prefix=settings.API_V1_PREFIX + "/chunks")
 
 
 @app.get("/", tags=["health"])

@@ -3,15 +3,18 @@ import { useAuth } from '../../app/providers/AuthProvider.jsx';
 import PageHeader from '../../components/common/PageHeader.jsx';
 import ErrorAlert from '../../components/common/ErrorAlert.jsx';
 import LoadingSpinner from '../../components/common/LoadingSpinner.jsx';
-import LocationSearch from '../onboarding/components/LocationSearch.jsx';
+
+// Components
+import AccountTab from './components/AccountTab.jsx';
+import LocationTab from './components/LocationTab.jsx';
+import HealthTab from './components/HealthTab.jsx';
+import PreferencesTab from './components/PreferencesTab.jsx';
+import PlaceholderTabs from './components/PlaceholderTabs.jsx';
+
+// APIs
 import profileApi from '../../services/profileApi.js';
 import environmentalApi from '../../services/environmentalApi.js';
 
-/**
- * Profile & settings (page workflows doc, section 10): account details,
- * location, health profile, routine, notifications, privacy, units.
- * Phase 2/3: Wired to user profile APIs and location APIs.
- */
 export default function ProfilePage() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('account');
@@ -23,12 +26,9 @@ export default function ProfilePage() {
   const [success, setSuccess] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState(null);
 
-  // Form state
   const [formData, setFormData] = useState({
-    // Account
     email: '',
     full_name: '',
-    // Profile
     date_of_birth: '',
     gender: '',
     height_cm: '',
@@ -45,7 +45,6 @@ export default function ProfilePage() {
     setLoading(true);
     setError(null);
     try {
-      // Load profile
       const profileRes = await profileApi.getProfile();
       setProfile(profileRes);
       setFormData(prev => ({
@@ -62,7 +61,6 @@ export default function ProfilePage() {
         timezone: profileRes.timezone || 'UTC',
       }));
 
-      // Load locations
       const locRes = await environmentalApi.getLocations();
       setLocations(locRes.locations || []);
       const defaultLoc = locRes.locations?.find(l => l.is_default);
@@ -71,7 +69,6 @@ export default function ProfilePage() {
       }
     } catch (err) {
       if (err.response?.status === 404) {
-        // Profile doesn't exist yet - that's OK for new users
         setProfile(null);
       } else {
         setError(err.response?.data?.detail || 'Failed to load profile data');
@@ -122,18 +119,13 @@ export default function ProfilePage() {
         await profileApi.createProfile(apiData);
       }
       setSuccess(true);
-      await loadData(); // Reload to get updated data
+      await loadData();
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to save profile');
     } finally {
       setSaving(false);
     }
-  };
-
-  const handleLocationSelect = (location) => {
-    setSelectedLocation(location);
-    setError(null);
   };
 
   const handleSaveLocation = async () => {
@@ -230,7 +222,7 @@ export default function ProfilePage() {
       <div className="card shadow-sm">
         <div className="card-header">
           <ul className="nav nav-tabs card-header-tabs" role="tablist">
-            {tabs.map((tab, i) => (
+            {tabs.map((tab) => (
               <li className="nav-item" key={tab.id}>
                 <button
                   className={'nav-link' + (activeTab === tab.id ? ' active' : '')}
@@ -247,354 +239,29 @@ export default function ProfilePage() {
           </ul>
         </div>
         <div className="card-body">
-          {/* Account Tab */}
           {activeTab === 'account' && (
-            <form onSubmit={(e) => { e.preventDefault(); handleSaveProfile(); }}>
-              <h5 className="card-title mb-3">Account Information</h5>
-              <div className="row g-3">
-                <div className="col-12 col-md-6">
-                  <label className="form-label">Email</label>
-                  <input
-                    type="email"
-                    className="form-control"
-                    value={user?.email || ''}
-                    disabled
-                  />
-                  <div className="form-text">Email cannot be changed. Contact support if needed.</div>
-                </div>
-                <div className="col-12 col-md-6">
-                  <label className="form-label">Full Name</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={formData.full_name}
-                    onChange={(e) => handleInputChange('full_name', e.target.value)}
-                    placeholder="Enter your full name"
-                  />
-                </div>
-              </div>
-              <div className="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  disabled={saving}
-                >
-                  {saving ? (
-                    <>
-                      <LoadingSpinner size="sm" className="me-2" />
-                      Saving...
-                    </>
-                  ) : (
-                    'Save Changes'
-                  )}
-                </button>
-              </div>
-            </form>
+            <AccountTab user={user} profile={profile} formData={formData} handleInputChange={handleInputChange} handleSaveProfile={handleSaveProfile} saving={saving} success={success} setSuccess={setSuccess} />
           )}
-
-          {/* Location Tab */}
           {activeTab === 'location' && (
-            <div>
-              <h5 className="card-title mb-3">Saved Locations</h5>
-
-              {locations.length > 0 ? (
-                <div className="table-responsive mb-4">
-                  <table className="table table-hover align-middle">
-                    <thead>
-                      <tr>
-                        <th>Name</th>
-                        <th>City / State</th>
-                        <th>Coordinates</th>
-                        <th>Default</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {locations.map(loc => (
-                        <tr key={loc.id}>
-                          <td>{loc.name}</td>
-                          <td>
-                            {loc.city && <span>{loc.city}</span>}
-                            {loc.city && loc.state && <span className="text-muted">, </span>}
-                            {loc.state && <span>{loc.state}</span>}
-                            {loc.country && <span className="text-muted ms-1">({loc.country})</span>}
-                          </td>
-                          <td className="text-muted small">
-                            {loc.lat?.toFixed(4)}, {loc.lon?.toFixed(4)}
-                          </td>
-                          <td>
-                            {loc.is_default ? (
-                              <span className="badge text-bg-success">Default</span>
-                            ) : (
-                              <button
-                                className="btn btn-outline-primary btn-sm"
-                                onClick={() => handleSetDefaultLocation(loc.id)}
-                                disabled={saving}
-                              >
-                                Set Default
-                              </button>
-                            )}
-                          </td>
-                          <td>
-                            {!loc.is_default && (
-                              <button
-                                className="btn btn-outline-danger btn-sm"
-                                onClick={() => handleDeleteLocation(loc.id)}
-                                disabled={saving}
-                              >
-                                <svg className="bi" width="16" height="16"><use xlinkHref="#trash" /></svg>
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <p className="text-supporting">No locations saved yet.</p>
-              )}
-
-              <hr className="my-4" />
-              <h5 className="card-title mb-3">Add New Location</h5>
-              <p className="text-supporting mb-4">
-                Search for a city or address to save as a location for air quality and weather monitoring.
-              </p>
-              <LocationSearch
-                onLocationSelect={handleLocationSelect}
-                selectedLocation={selectedLocation}
-              />
-              {selectedLocation && (
-                <div className="alert alert-success mt-3 mb-0 small">
-                  <svg className="bi me-1" width="16" height="16"><use xlinkHref="#check-circle" /></svg>
-                  Selected: <strong>{selectedLocation.display_name}</strong>
-                  <div className="text-muted mt-1">
-                    Coordinates: {selectedLocation.lat?.toFixed(4)}, {selectedLocation.lon?.toFixed(4)}
-                    {selectedLocation.city && ` • City: ${selectedLocation.city}`}
-                    {selectedLocation.state && ` • State: ${selectedLocation.state}`}
-                    {selectedLocation.country && ` • Country: ${selectedLocation.country}`}
-                  </div>
-                </div>
-              )}
-              <div className="d-grid gap-2 d-md-flex justify-content-md-end mt-3">
-                <button
-                  className="btn btn-primary"
-                  onClick={handleSaveLocation}
-                  disabled={saving || !selectedLocation}
-                >
-                  {saving ? (
-                    <>
-                      <LoadingSpinner size="sm" className="me-2" />
-                      Saving...
-                    </>
-                  ) : (
-                    'Save Location'
-                  )}
-                </button>
-              </div>
-            </div>
+            <LocationTab
+              locations={locations}
+              loading={loading}
+              selectedLocation={selectedLocation}
+              handleLocationSelect={setSelectedLocation}
+              handleSaveLocation={handleSaveLocation}
+              handleSetDefaultLocation={handleSetDefaultLocation}
+              handleDeleteLocation={handleDeleteLocation}
+              saving={saving}
+            />
           )}
-
-          {/* Health Tab */}
           {activeTab === 'health' && (
-            <form onSubmit={(e) => { e.preventDefault(); handleSaveProfile(); }}>
-              <h5 className="card-title mb-3">Health Profile</h5>
-              <p className="text-supporting mb-4">
-                This information helps us tailor air quality advisories and health recommendations for you.
-              </p>
-
-              <div className="row g-3 mb-4">
-                <div className="col-12 col-md-6">
-                  <label className="form-label">Date of Birth</label>
-                  <input
-                    type="date"
-                    className="form-control"
-                    value={formData.date_of_birth}
-                    onChange={(e) => handleInputChange('date_of_birth', e.target.value)}
-                    max={new Date().toISOString().split('T')[0]}
-                  />
-                </div>
-                <div className="col-12 col-md-6">
-                  <label className="form-label">Gender</label>
-                  <select
-                    className="form-select"
-                    value={formData.gender}
-                    onChange={(e) => handleInputChange('gender', e.target.value)}
-                  >
-                    <option value="">Select...</option>
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                    <option value="non_binary">Non-binary</option>
-                    <option value="prefer_not_to_say">Prefer not to say</option>
-                  </select>
-                </div>
-                <div className="col-12 col-md-6">
-                  <label className="form-label">Height (cm)</label>
-                  <input
-                    type="number"
-                    className="form-control"
-                    value={formData.height_cm}
-                    onChange={(e) => handleInputChange('height_cm', e.target.value)}
-                    placeholder="170"
-                    min="30"
-                    max="300"
-                  />
-                </div>
-                <div className="col-12 col-md-6">
-                  <label className="form-label">Weight (kg)</label>
-                  <input
-                    type="number"
-                    className="form-control"
-                    value={formData.weight_kg}
-                    onChange={(e) => handleInputChange('weight_kg', e.target.value)}
-                    placeholder="70"
-                    min="1"
-                    max="500"
-                    step="0.1"
-                  />
-                </div>
-              </div>
-
-              <div className="mb-4">
-                <label className="form-label fw-medium">Health Conditions</label>
-                <div className="row g-2">
-                  {['Asthma', 'COPD', 'Heart disease', 'Diabetes', 'Allergies', 'Pregnancy', 'None'].map(condition => (
-                    <div key={condition} className="col-12 col-md-6 col-lg-4">
-                      <div className="form-check">
-                        <input
-                          className="form-check-input"
-                          type="checkbox"
-                          value={condition}
-                          checked={formData.health_conditions.includes(condition)}
-                          onChange={() => handleCheckboxToggle('health_conditions', condition)}
-                          id={`profile-health-${condition}`}
-                        />
-                        <label className="form-check-label" htmlFor={`profile-health-${condition}`}>
-                          {condition}
-                        </label>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="mb-4">
-                <label className="form-label fw-medium">Sensitivities</label>
-                <div className="row g-2">
-                  {['Air pollution', 'Pollen', 'Heat', 'Cold', 'Humidity', 'None'].map(sensitivity => (
-                    <div key={sensitivity} className="col-12 col-md-6 col-lg-4">
-                      <div className="form-check">
-                        <input
-                          className="form-check-input"
-                          type="checkbox"
-                          value={sensitivity}
-                          checked={formData.sensitivities.includes(sensitivity)}
-                          onChange={() => handleCheckboxToggle('sensitivities', sensitivity)}
-                          id={`profile-sens-${sensitivity}`}
-                        />
-                        <label className="form-check-label" htmlFor={`profile-sens-${sensitivity}`}>
-                          {sensitivity}
-                        </label>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="d-grid gap-2 d-md-flex justify-content-md-end">
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  disabled={saving}
-                >
-                  {saving ? (
-                    <>
-                      <LoadingSpinner size="sm" className="me-2" />
-                      Saving...
-                    </>
-                  ) : (
-                    'Save Changes'
-                  )}
-                </button>
-              </div>
-            </form>
+            <HealthTab formData={formData} handleInputChange={handleInputChange} handleCheckboxToggle={handleCheckboxToggle} handleSaveProfile={handleSaveProfile} saving={saving} />
           )}
-
-          {/* Preferences Tab */}
           {activeTab === 'preferences' && (
-            <form onSubmit={(e) => { e.preventDefault(); handleSaveProfile(); }}>
-              <h5 className="card-title mb-3">Preferences</h5>
-              <div className="row g-3">
-                <div className="col-12 col-md-4">
-                  <label className="form-label">Preferred Units</label>
-                  <select
-                    className="form-select"
-                    value={formData.preferred_units}
-                    onChange={(e) => handleInputChange('preferred_units', e.target.value)}
-                  >
-                    <option value="metric">Metric (°C, km, m/s)</option>
-                    <option value="imperial">Imperial (°F, mi, mph)</option>
-                  </select>
-                </div>
-                <div className="col-12 col-md-4">
-                  <label className="form-label">Language</label>
-                  <select
-                    className="form-select"
-                    value={formData.language}
-                    onChange={(e) => handleInputChange('language', e.target.value)}
-                  >
-                    <option value="en">English</option>
-                    <option value="hi">Hindi</option>
-                    <option value="ta">Tamil</option>
-                    <option value="te">Telugu</option>
-                    <option value="bn">Bengali</option>
-                  </select>
-                </div>
-                <div className="col-12 col-md-4">
-                  <label className="form-label">Timezone</label>
-                  <select
-                    className="form-select"
-                    value={formData.timezone}
-                    onChange={(e) => handleInputChange('timezone', e.target.value)}
-                  >
-                    <option value="UTC">UTC</option>
-                    <option value="Asia/Kolkata">Asia/Kolkata (IST)</option>
-                    <option value="America/New_York">America/New_York (EST)</option>
-                    <option value="America/Los_Angeles">America/Los_Angeles (PST)</option>
-                    <option value="Europe/London">Europe/London (GMT)</option>
-                  </select>
-                </div>
-              </div>
-              <div className="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  disabled={saving}
-                >
-                  {saving ? (
-                    <>
-                      <LoadingSpinner size="sm" className="me-2" />
-                      Saving...
-                    </>
-                  ) : (
-                    'Save Changes'
-                  )}
-                </button>
-              </div>
-            </form>
+            <PreferencesTab formData={formData} handleInputChange={handleInputChange} handleSaveProfile={handleSaveProfile} saving={saving} />
           )}
-
-          {/* Routine & Notifications tabs - placeholders */}
           {['routine', 'notifications'].includes(activeTab) && (
-            <div className="text-center py-5">
-              <svg className="bi text-muted mb-3" width="64" height="64"><use xlinkHref="#clock-history" /></svg>
-              <h5 className="text-body-secondary">Coming Soon</h5>
-              <p className="text-supporting">
-                {activeTab === 'routine'
-                  ? 'Daily routine planner will be available in Phase 6.'
-                  : 'Notification preferences will be available in Phase 9.'}
-              </p>
-            </div>
+            <PlaceholderTabs tabId={activeTab} />
           )}
         </div>
       </div>

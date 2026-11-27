@@ -117,13 +117,13 @@ class WeatherService:
         longitude: float,
     ) -> Optional[WeatherReadingCreate]:
         """Fetch current weather data from OpenWeatherMap for a location."""
-        if not settings.GEOCODING_API_KEY:  # Using GEOCODING_API_KEY for OpenWeatherMap as well
-            raise ValueError("OpenWeatherMap API key not configured (use GEOCODING_API_KEY)")
+        if not settings.OPENWEATHERMAP_API_KEY:
+            raise ValueError("OpenWeatherMap API key not configured (use OPENWEATHERMAP_API_KEY)")
 
         params = {
             "lat": latitude,
             "lon": longitude,
-            "appid": settings.GEOCODING_API_KEY,
+            "appid": settings.OPENWEATHERMAP_API_KEY,
             "units": "metric",
         }
 

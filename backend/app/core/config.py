@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     # External providers — keys stay server-side only (Phase 3+)
     OPENAQ_API_KEY: str = ""
     GEOCODING_API_KEY: str = ""
+    OPENWEATHERMAP_API_KEY: str = ""
     LLM_API_KEY: str = ""
     EMBEDDING_API_KEY: str = ""
 

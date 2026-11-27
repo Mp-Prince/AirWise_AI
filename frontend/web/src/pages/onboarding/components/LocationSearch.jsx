@@ -62,7 +62,8 @@ export default function LocationSearch({ onLocationSelect, selectedLocation, dis
   };
 
   const handleResultClick = (location) => {
-    setQuery(location.display_name);
+    const label = location.display_name || location.name || '';
+    setQuery(label);
     setResults([]);
     setShowDropdown(false);
     if (onLocationSelect) {
@@ -71,7 +72,7 @@ export default function LocationSearch({ onLocationSelect, selectedLocation, dis
   };
 
   const handleFocus = () => {
-    if (query.length >= 2) {
+    if (query.length >= 2 && results.length > 0) {
       setShowDropdown(true);
     }
   };
@@ -82,12 +83,15 @@ export default function LocationSearch({ onLocationSelect, selectedLocation, dis
     }
   };
 
-  // Pre-fill with selected location
+  // Sync input text with selected location prop
   useEffect(() => {
-    if (selectedLocation && !query) {
-      setQuery(selectedLocation.display_name || selectedLocation.name || '');
+    if (selectedLocation) {
+      const label = selectedLocation.display_name || selectedLocation.name || '';
+      if (label) {
+        setQuery(label);
+      }
     }
-  }, [selectedLocation, query]);
+  }, [selectedLocation]);
 
   if (disabled) {
     return (

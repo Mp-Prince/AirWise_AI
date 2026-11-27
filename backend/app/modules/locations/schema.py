@@ -2,15 +2,15 @@
 from datetime import datetime
 from typing import Optional
 from uuid import UUID
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, AliasChoices
 
 
 class LocationBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=100, description="Location name")
     lat: float = Field(..., ge=-90, le=90, description="Latitude",
-                       validation_alias="latitude", serialization_alias="lat")
+                       validation_alias=AliasChoices("latitude", "lat"), serialization_alias="lat")
     lon: float = Field(..., ge=-180, le=180, description="Longitude",
-                       validation_alias="longitude", serialization_alias="lon")
+                       validation_alias=AliasChoices("longitude", "lon"), serialization_alias="lon")
     city: Optional[str] = Field(None, max_length=100, description="City name")
     state: Optional[str] = Field(None, max_length=100, description="State/province name")
     country: Optional[str] = Field(None, max_length=100, description="Country name")
@@ -27,9 +27,9 @@ class LocationCreate(LocationBase):
 class LocationUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=100)
     lat: Optional[float] = Field(None, ge=-90, le=90,
-                                  validation_alias="latitude", serialization_alias="lat")
+                                  validation_alias=AliasChoices("latitude", "lat"), serialization_alias="lat")
     lon: Optional[float] = Field(None, ge=-180, le=180,
-                                  validation_alias="longitude", serialization_alias="lon")
+                                  validation_alias=AliasChoices("longitude", "lon"), serialization_alias="lon")
     city: Optional[str] = Field(None, max_length=100)
     state: Optional[str] = Field(None, max_length=100)
     country: Optional[str] = Field(None, max_length=100)

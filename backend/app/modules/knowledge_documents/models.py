@@ -1,8 +1,8 @@
 """Knowledge document entity model."""
 import uuid
 from datetime import datetime
-from sqlalchemy import String, DateTime, Text, Index, JSON
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import String, DateTime, Text, Index, JSON, Boolean
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database.base import Base
 
 class KnowledgeDocumentModel(Base):
@@ -15,8 +15,17 @@ class KnowledgeDocumentModel(Base):
     content_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
     full_text: Mapped[str] = mapped_column(Text, nullable=True)
     metadata_json: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    # Relationship to chunks
+    chunks: Mapped[list["DocumentChunkModel"]] = relationship(
+        "DocumentChunkModel",
+        back_populates="document",
+        cascade="all, delete-orphan",
+        lazy="selectin"
+    )
 
     __table_args__ = (
         Index("ix_knowledge_documents_source", "source_type", "created_at"),

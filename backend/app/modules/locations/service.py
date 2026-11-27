@@ -20,6 +20,9 @@ GEOCODING_HEADERS = {
     "User-Agent": "AirWise AI / 1.0 (airwise@example.com)",
 }
 
+# Geoapify geocoding (optional, for when Nominatim is rate limited)
+GEOAPIFY_BASE_URL = "https://api.geoapify.com/v1/geocode"
+
 
 class LocationService:
     """Service for managing user locations with geocoding."""
@@ -203,6 +206,30 @@ class LocationService:
             response.raise_for_status()
             return response.json()
 
+    async def geocode_address_geoapify(
+        self,
+        address: str,
+        limit: int = 5,
+    ) -> list[dict]:
+        """Geocode an address to coordinates using Geoapify (fallback for Nominatim rate limits)."""
+        if not settings.GEOCODING_API_KEY:
+            return []
+
+        params = {
+            "text": address,
+            "limit": limit,
+            "apiKey": settings.GEOCODING_API_KEY,
+        }
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.get(
+                f"{GEOAPIFY_BASE_URL}/search",
+                params=params,
+            )
+            response.raise_for_status()
+            data = response.json()
+            return data.get("features", [])
+
     async def search_locations(
         self,
         query: str,
@@ -223,6 +250,7 @@ class LocationService:
                 "country": loc.country,
                 "is_saved": True,
                 "is_default": loc.is_default,
+                "display_name": f"{loc.name}" + (f", {loc.city}" if loc.city else "") + (f", {loc.state}" if loc.state else ""),
             }
             for loc in user_locations
             if query.lower() in loc.name.lower()
@@ -230,28 +258,47 @@ class LocationService:
             or (loc.state and query.lower() in loc.state.lower())
         ]
 
-        # Then, geocode for new locations
+        # Then, geocode for new locations (try Nominatim first, fallback to Geoapify)
+        geocode_results = []
         try:
             geocode_results = await self.geocode_address(query, limit=limit)
-            geocode_formatted = [
-                {
-                    "id": None,
-                    "name": r.get("display_name", "").split(",")[0],
-                    "lat": float(r["lat"]),
-                    "lon": float(r["lon"]),
-                    "city": r.get("address", {}).get("city")
-                        or r.get("address", {}).get("town")
-                        or r.get("address", {}).get("village"),
-                    "state": r.get("address", {}).get("state"),
-                    "country": r.get("address", {}).get("country"),
-                    "is_saved": False,
-                    "is_default": False,
-                    "display_name": r.get("display_name"),
-                }
-                for r in geocode_results
-            ]
         except Exception:
-            geocode_formatted = []
+            # Fallback to Geoapify if Nominatim fails (e.g., rate limited)
+            try:
+                geoapify_features = await self.geocode_address_geoapify(query, limit=limit)
+                geocode_results = [
+                    {
+                        "lat": f["geometry"]["coordinates"][1],
+                        "lon": f["geometry"]["coordinates"][0],
+                        "display_name": f["properties"].get("formatted", ""),
+                        "address": {
+                            "city": f["properties"].get("city"),
+                            "state": f["properties"].get("state"),
+                            "country": f["properties"].get("country"),
+                        },
+                    }
+                    for f in geoapify_features
+                ]
+            except Exception:
+                geocode_results = []
+
+        geocode_formatted = [
+            {
+                "id": None,
+                "name": r.get("display_name", "").split(",")[0],
+                "lat": float(r["lat"]),
+                "lon": float(r["lon"]),
+                "city": r.get("address", {}).get("city")
+                    or r.get("address", {}).get("town")
+                    or r.get("address", {}).get("village"),
+                "state": r.get("address", {}).get("state"),
+                "country": r.get("address", {}).get("country"),
+                "is_saved": False,
+                "is_default": False,
+                "display_name": r.get("display_name"),
+            }
+            for r in geocode_results
+        ]
 
         # Combine and deduplicate
         all_results = user_results + geocode_formatted
