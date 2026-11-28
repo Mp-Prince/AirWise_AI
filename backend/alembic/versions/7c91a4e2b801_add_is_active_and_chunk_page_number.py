@@ -19,18 +19,34 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    """Add is_active to knowledge_documents and page_number to document_chunks."""
-    op.add_column(
-        "knowledge_documents",
-        sa.Column("is_active", sa.Boolean(), server_default=sa.true(), nullable=False),
-    )
-    op.add_column(
-        "document_chunks",
-        sa.Column("page_number", sa.Integer(), nullable=True),
-    )
+    """Add is_active to knowledge_documents and page_number to document_chunks safely."""
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+
+    kd_cols = {col["name"] for col in inspector.get_columns("knowledge_documents")}
+    if "is_active" not in kd_cols:
+        op.add_column(
+            "knowledge_documents",
+            sa.Column("is_active", sa.Boolean(), server_default=sa.true(), nullable=False),
+        )
+
+    dc_cols = {col["name"] for col in inspector.get_columns("document_chunks")}
+    if "page_number" not in dc_cols:
+        op.add_column(
+            "document_chunks",
+            sa.Column("page_number", sa.Integer(), nullable=True),
+        )
 
 
 def downgrade() -> None:
     """Revert Phase 4 metadata column additions."""
-    op.drop_column("document_chunks", "page_number")
-    op.drop_column("knowledge_documents", "is_active")
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+
+    dc_cols = {col["name"] for col in inspector.get_columns("document_chunks")}
+    if "page_number" in dc_cols:
+        op.drop_column("document_chunks", "page_number")
+
+    kd_cols = {col["name"] for col in inspector.get_columns("knowledge_documents")}
+    if "is_active" in kd_cols:
+        op.drop_column("knowledge_documents", "is_active")

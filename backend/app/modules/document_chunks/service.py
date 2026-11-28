@@ -58,6 +58,15 @@ class DocumentChunkService:
     async def retrieve(self, request: RetrievalRequest) -> RetrievalResponse:
         """Embed query and perform semantic retrieval."""
         start_time = time.time()
+        total_chunks = await self.repo.count_all()
+        if total_chunks == 0:
+            return RetrievalResponse(
+                query=request.query,
+                results=[],
+                total_searched=0,
+                retrieval_time_ms=(time.time() - start_time) * 1000,
+            )
+
         query_embedding = await generate_embedding(request.query)
         results = await self.repo.semantic_search(
             query_embedding=query_embedding,

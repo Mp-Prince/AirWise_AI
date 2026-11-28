@@ -28,7 +28,9 @@ class Settings(BaseSettings):
     GEOCODING_API_KEY: str = ""
     OPENWEATHERMAP_API_KEY: str = ""
     LLM_API_KEY: str = ""
+    LLM_MODEL: str = "gemini-3-flash-preview"
     EMBEDDING_API_KEY: str = ""
+    ASSISTANT_RATE_LIMIT_PER_MINUTE: int = 20
 
     @property
     def cors_origin_list(self) -> list[str]:

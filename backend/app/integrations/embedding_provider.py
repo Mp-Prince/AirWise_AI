@@ -16,7 +16,10 @@ def _get_model():
     """Load and cache the SentenceTransformer model once per process."""
     from sentence_transformers import SentenceTransformer
 
-    return SentenceTransformer(EMBEDDING_MODEL_ID)
+    try:
+        return SentenceTransformer(EMBEDDING_MODEL_ID, local_files_only=True)
+    except Exception:
+        return SentenceTransformer(EMBEDDING_MODEL_ID)
 
 
 def _encode_sync(texts: list[str]) -> list[list[float]]:

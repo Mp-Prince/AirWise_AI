@@ -15,6 +15,7 @@ from app.modules.weather_readings.routes import router as weather_router
 from app.modules.knowledge_documents.module import router as knowledge_documents_router
 from app.modules.document_chunks.module import router as document_chunks_router
 from app.modules.rag.module import router as rag_router
+from app.modules.assistant.module import router as assistant_router
 
 # Import all model modules to register them with SQLAlchemy
 import app.modules.users.models
@@ -25,6 +26,9 @@ import app.modules.weather_readings.models
 import app.modules.knowledge_documents.models
 import app.modules.document_chunks.models
 import app.modules.rag.models
+import app.modules.chat_conversations.models
+import app.modules.chat_messages.models
+import app.modules.user_actions.models
 
 settings = get_settings()
 
@@ -54,6 +58,8 @@ app.include_router(weather_router, prefix=settings.API_V1_PREFIX + "/weather")
 app.include_router(knowledge_documents_router, prefix=settings.API_V1_PREFIX + "/knowledge")
 app.include_router(document_chunks_router, prefix=settings.API_V1_PREFIX + "/chunks")
 app.include_router(rag_router, prefix=settings.API_V1_PREFIX + "/rag")
+# Mount Phase 5 router
+app.include_router(assistant_router, prefix=settings.API_V1_PREFIX + "/assistant")
 
 
 @app.get("/", tags=["health"])
