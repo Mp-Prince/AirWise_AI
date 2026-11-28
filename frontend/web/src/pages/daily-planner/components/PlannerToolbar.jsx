@@ -1,3 +1,5 @@
+import { parseLocalIsoDate } from '../../../utils/dateUtils.js';
+
 /**
  * Toolbar for navigating dates/weeks and opening Add Event modal (Phase 6).
  */
@@ -10,7 +12,7 @@ export default function PlannerToolbar({
   onToday,
   onAddEvent,
 }) {
-  const formatted = new Date(`${selectedDate}T00:00:00`).toLocaleDateString(undefined, {
+  const formatted = parseLocalIsoDate(selectedDate).toLocaleDateString(undefined, {
     weekday: 'short',
     year: 'numeric',
     month: 'short',

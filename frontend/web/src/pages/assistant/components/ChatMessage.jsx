@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import routineService from '../../../services/routineService.js';
+import { toLocalIsoDate } from '../../../utils/dateUtils.js';
 import SourceCitationList from './SourceCitationList.jsx';
 
 const PRIORITY_BADGE = {
@@ -31,7 +32,7 @@ export default function ChatMessage({ message, onFeedback }) {
     if (addedRecs[idx]) return;
     setAddedRecs((prev) => ({ ...prev, [idx]: 'saving' }));
     try {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = toLocalIsoDate();
       await routineService.createRoutine({
         name: rec.title.slice(0, 160),
         description: rec.action,

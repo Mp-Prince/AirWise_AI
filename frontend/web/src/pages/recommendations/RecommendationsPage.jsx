@@ -6,6 +6,7 @@ import ErrorAlert from '../../components/common/ErrorAlert.jsx';
 import LoadingSpinner from '../../components/common/LoadingSpinner.jsx';
 import EmptyState from '../../components/common/EmptyState.jsx';
 import recommendationService from '../../services/recommendationService.js';
+import { toLocalIsoDate } from '../../utils/dateUtils.js';
 import RecommendationFilters from './components/RecommendationFilters.jsx';
 import RecommendationCard from './components/RecommendationCard.jsx';
 import RecommendationDetailsModal from './components/RecommendationDetailsModal.jsx';
@@ -105,7 +106,7 @@ export default function RecommendationsPage() {
     setBusyId(rec.id);
     setError(null);
     try {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = toLocalIsoDate();
       const routineType =
         rec.category === 'eco'
           ? 'commute'

@@ -1,15 +1,11 @@
+import { addDaysIso, parseLocalIsoDate, toLocalIsoDate } from '../../../utils/dateUtils.js';
+
 const SAFETY_COLOR = {
   safe: 'border-success',
   caution: 'border-warning',
   avoid: 'border-danger',
   unknown: 'border-secondary',
 };
-
-function addDays(isoDate, offset) {
-  const d = new Date(`${isoDate}T00:00:00`);
-  d.setDate(d.getDate() + offset);
-  return d.toISOString().slice(0, 10);
-}
 
 /**
  * 7-day calendar week grid for desktop/tablet screens (Phase 6).
@@ -19,15 +15,18 @@ export default function PlannerCalendar({
   events,
   onSelectDate,
   onEdit,
+  onDelete,
   onToggleComplete,
 }) {
-  const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  const days = Array.from({ length: 7 }, (_, i) => addDaysIso(weekStart, i));
+  const todayStr = toLocalIsoDate();
 
   return (
     <div className="row g-2">
       {days.map((dayStr) => {
-        const dateObj = new Date(`${dayStr}T00:00:00`);
+        const dateObj = parseLocalIsoDate(dayStr);
         const weekdayIdx = (dateObj.getDay() + 6) % 7; // 0=Mon..6=Sun
+        const isToday = dayStr === todayStr;
         const dayEvents = events.filter(
           (ev) =>
             ev.routine_date === dayStr ||
@@ -36,8 +35,8 @@ export default function PlannerCalendar({
 
         return (
           <div className="col-12 col-md-6 col-xl" key={dayStr}>
-            <div className="card h-100">
-              <div className="card-header py-2 d-flex justify-content-between align-items-center">
+            <div className={`card h-100 ${isToday ? 'border-primary' : ''}`}>
+              <div className={`card-header py-2 d-flex justify-content-between align-items-center ${isToday ? 'bg-primary-subtle' : ''}`}>
                 <button
                   type="button"
                   className="btn btn-link btn-sm p-0 text-decoration-none fw-semibold"
@@ -83,6 +82,16 @@ export default function PlannerCalendar({
                         >
                           <i className="bi bi-pencil" aria-hidden="true" />
                         </button>
+                        {onDelete && (
+                          <button
+                            type="button"
+                            className="btn btn-outline-danger btn-sm py-0 px-1"
+                            onClick={() => onDelete(ev)}
+                            title="Delete"
+                          >
+                            <i className="bi bi-trash" aria-hidden="true" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))

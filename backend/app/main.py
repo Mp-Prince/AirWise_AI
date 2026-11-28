@@ -18,6 +18,8 @@ from app.modules.rag.module import router as rag_router
 from app.modules.assistant.module import router as assistant_router
 from app.modules.daily_routines.module import router as routines_router
 from app.modules.recommendations.module import router as recommendations_router
+from app.modules.emission_factors.module import router as emission_factors_router
+from app.modules.impact_records.module import router as impact_router
 
 # Import all model modules to register them with SQLAlchemy
 import app.modules.users.models
@@ -33,6 +35,8 @@ import app.modules.chat_messages.models
 import app.modules.user_actions.models
 import app.modules.daily_routines.models
 import app.modules.recommendations.models
+import app.modules.emission_factors.models
+import app.modules.impact_records.models
 
 settings = get_settings()
 
@@ -67,6 +71,9 @@ app.include_router(assistant_router, prefix=settings.API_V1_PREFIX + "/assistant
 # Mount Phase 6 routers
 app.include_router(routines_router, prefix=settings.API_V1_PREFIX + "/routines")
 app.include_router(recommendations_router, prefix=settings.API_V1_PREFIX + "/recommendations")
+# Mount Phase 7 routers
+app.include_router(emission_factors_router, prefix=settings.API_V1_PREFIX + "/emission-factors")
+app.include_router(impact_router, prefix=settings.API_V1_PREFIX + "/impact")
 
 
 @app.get("/", tags=["health"])

@@ -9,23 +9,7 @@ import PlannerFilters from './components/PlannerFilters.jsx';
 import PlannerCalendar from './components/PlannerCalendar.jsx';
 import PlannerAgenda from './components/PlannerAgenda.jsx';
 import EventFormModal from './components/EventFormModal.jsx';
-
-function todayIso() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function getMonday(isoDate) {
-  const d = new Date(`${isoDate}T00:00:00`);
-  const day = (d.getDay() + 6) % 7;
-  d.setDate(d.getDate() - day);
-  return d.toISOString().slice(0, 10);
-}
-
-function addDays(isoDate, offset) {
-  const d = new Date(`${isoDate}T00:00:00`);
-  d.setDate(d.getDate() + offset);
-  return d.toISOString().slice(0, 10);
-}
+import { addDaysIso, getWeekStartIso, toLocalIsoDate } from '../../utils/dateUtils.js';
 
 /**
  * Daily planner (page workflows doc, section 5): calendar/agenda with
@@ -33,7 +17,7 @@ function addDays(isoDate, offset) {
  */
 export default function DailyPlannerPage() {
   const { user } = useAuth();
-  const [selectedDate, setSelectedDate] = useState(todayIso);
+  const [selectedDate, setSelectedDate] = useState(() => toLocalIsoDate());
   const [viewMode, setViewMode] = useState('week');
   const [category, setCategory] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -46,8 +30,8 @@ export default function DailyPlannerPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
 
-  const weekStart = getMonday(selectedDate);
-  const weekEnd = addDays(weekStart, 6);
+  const weekStart = getWeekStartIso(selectedDate);
+  const weekEnd = addDaysIso(weekStart, 6);
 
   const loadRoutines = useCallback(async () => {
     if (!user) return;
@@ -152,9 +136,9 @@ export default function DailyPlannerPage() {
             selectedDate={selectedDate}
             viewMode={viewMode}
             onViewModeChange={setViewMode}
-            onPrev={() => setSelectedDate((d) => addDays(d, -stepDays))}
-            onNext={() => setSelectedDate((d) => addDays(d, stepDays))}
-            onToday={() => setSelectedDate(todayIso())}
+            onPrev={() => setSelectedDate((d) => addDaysIso(d, -stepDays))}
+            onNext={() => setSelectedDate((d) => addDaysIso(d, stepDays))}
+            onToday={() => setSelectedDate(toLocalIsoDate())}
             onAddEvent={() => {
               setEditingEvent(null);
               setModalOpen(true);
@@ -188,6 +172,7 @@ export default function DailyPlannerPage() {
                       setEditingEvent(ev);
                       setModalOpen(true);
                     }}
+                    onDelete={handleDelete}
                     onToggleComplete={handleToggleComplete}
                   />
                 </div>

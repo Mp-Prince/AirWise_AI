@@ -16,13 +16,13 @@
 | 3     | Environmental data integration        | ✅ **COMPLETE** | `8d5adb7`, `836ed55`, `dcbf5fc`, `0a98b27` |
 | 4     | RAG knowledge base                    | ✅ **COMPLETE** | `0a98b27`                |
 | 5     | LLM assistant                         | ✅ **COMPLETE** | `26abad8`                |
-| 6     | Recommendation and daily planner      | ✅ **COMPLETE** | (pending commit)         |
-| 7     | Environmental impact engine           | ⏳ Pending            | —                       |
+| 6     | Recommendation and daily planner      | ✅ **COMPLETE** | `a861428`                |
+| 7     | Environmental impact engine           | ✅ **COMPLETE** | (pending commit)         |
 | 8     | Family functionality                  | ⏳ Pending            | —                       |
 | 9     | Responsive frontend completion / PWA  | ⏳ Pending            | —                       |
 | 10    | Testing, deployment and demonstration | ⏳ Pending            | —                       |
 
-**Current Phase:** 6 — Recommendation and daily planner ✅ **COMPLETE** (pending commit & push)
+**Current Phase:** 7 — Environmental impact engine ✅ **COMPLETE** (pending commit & push)
 
 ## 1. Development strategy
 
