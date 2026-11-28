@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import routineService from '../../../services/routineService.js';
 import SourceCitationList from './SourceCitationList.jsx';
 
 const PRIORITY_BADGE = {
@@ -7,14 +8,44 @@ const PRIORITY_BADGE = {
   low: 'text-bg-info',
 };
 
+const REC_TO_ROUTINE_TYPE = {
+  health: 'exercise',
+  commute: 'commute',
+  indoor_air: 'indoor_air',
+  energy: 'energy',
+  planning: 'other',
+  general: 'other',
+};
+
 /**
  * Single user or assistant chat message with structured recommendations,
- * citations, environmental context timestamp, copy, and feedback controls.
+ * citations, environmental context timestamp, copy, add-to-planner, and feedback controls.
  */
 export default function ChatMessage({ message, onFeedback }) {
   const [copied, setCopied] = useState(false);
   const [feedbackSent, setFeedbackSent] = useState(null);
+  const [addedRecs, setAddedRecs] = useState({});
   const isUser = message.role === 'user';
+
+  const handleAddRecToPlanner = async (rec, idx) => {
+    if (addedRecs[idx]) return;
+    setAddedRecs((prev) => ({ ...prev, [idx]: 'saving' }));
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      await routineService.createRoutine({
+        name: rec.title.slice(0, 160),
+        description: rec.action,
+        routine_type: REC_TO_ROUTINE_TYPE[rec.category] || 'other',
+        routine_date: today,
+        start_time: '08:00:00',
+        end_time: '08:30:00',
+        reminder_minutes: 15,
+      });
+      setAddedRecs((prev) => ({ ...prev, [idx]: 'added' }));
+    } catch {
+      setAddedRecs((prev) => ({ ...prev, [idx]: 'error' }));
+    }
+  };
 
   const handleCopy = async () => {
     try {
@@ -90,6 +121,23 @@ export default function ChatMessage({ message, onFeedback }) {
                     {rec.expected_benefit && (
                       <div className="text-success mt-1">Benefit: {rec.expected_benefit}</div>
                     )}
+                    <div className="mt-2">
+                      <button
+                        type="button"
+                        className={`btn btn-sm py-0 px-2 ${
+                          addedRecs[idx] === 'added' ? 'btn-success' : 'btn-outline-primary'
+                        }`}
+                        onClick={() => handleAddRecToPlanner(rec, idx)}
+                        disabled={addedRecs[idx] === 'saving' || addedRecs[idx] === 'added'}
+                      >
+                        <i className="bi bi-calendar-plus me-1" aria-hidden="true" />
+                        {addedRecs[idx] === 'added'
+                          ? 'Added to Planner'
+                          : addedRecs[idx] === 'saving'
+                          ? 'Adding...'
+                          : 'Add to Planner'}
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>

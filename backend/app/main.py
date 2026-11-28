@@ -16,6 +16,8 @@ from app.modules.knowledge_documents.module import router as knowledge_documents
 from app.modules.document_chunks.module import router as document_chunks_router
 from app.modules.rag.module import router as rag_router
 from app.modules.assistant.module import router as assistant_router
+from app.modules.daily_routines.module import router as routines_router
+from app.modules.recommendations.module import router as recommendations_router
 
 # Import all model modules to register them with SQLAlchemy
 import app.modules.users.models
@@ -29,6 +31,8 @@ import app.modules.rag.models
 import app.modules.chat_conversations.models
 import app.modules.chat_messages.models
 import app.modules.user_actions.models
+import app.modules.daily_routines.models
+import app.modules.recommendations.models
 
 settings = get_settings()
 
@@ -60,6 +64,9 @@ app.include_router(document_chunks_router, prefix=settings.API_V1_PREFIX + "/chu
 app.include_router(rag_router, prefix=settings.API_V1_PREFIX + "/rag")
 # Mount Phase 5 router
 app.include_router(assistant_router, prefix=settings.API_V1_PREFIX + "/assistant")
+# Mount Phase 6 routers
+app.include_router(routines_router, prefix=settings.API_V1_PREFIX + "/routines")
+app.include_router(recommendations_router, prefix=settings.API_V1_PREFIX + "/recommendations")
 
 
 @app.get("/", tags=["health"])
