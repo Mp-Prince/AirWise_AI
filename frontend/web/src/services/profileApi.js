@@ -31,6 +31,11 @@ export const profileApi = {
     return response.data;
   },
 
+  async upsertProfile(data) {
+    const response = await apiClient.post('/profile/upsert', data);
+    return response.data;
+  },
+
   // Location operations (consolidated with environmentalApi)
   async getLocations() {
     const response = await apiClient.get('/locations');

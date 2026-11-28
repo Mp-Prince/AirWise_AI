@@ -8,6 +8,7 @@ class DocumentChunkBase(BaseModel):
     """Base document chunk schema."""
     document_id: UUID = Field(..., description="Parent document ID")
     chunk_index: int = Field(..., ge=0, description="Chunk sequence index")
+    page_number: Optional[int] = Field(None, ge=1, description="Source page number if applicable")
     content: str = Field(..., min_length=1, description="Chunk text content")
     token_count: Optional[int] = Field(None, ge=0, description="Approximate token count")
 
@@ -31,6 +32,7 @@ class DocumentChunkWithScore(BaseModel):
     id: UUID
     document_id: UUID
     chunk_index: int
+    page_number: Optional[int] = None
     content: str
     token_count: Optional[int]
     similarity_score: float

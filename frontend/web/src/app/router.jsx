@@ -13,6 +13,7 @@ import RecommendationsPage from '../pages/recommendations/RecommendationsPage.js
 import ImpactTrackerPage from '../pages/impact/ImpactTrackerPage.jsx';
 import FamilyPage from '../pages/family/FamilyPage.jsx';
 import ProfilePage from '../pages/profile/ProfilePage.jsx';
+import KnowledgeBasePage from '../pages/knowledge/KnowledgeBasePage.jsx';
 
 /**
  * Auth guard component - redirects to login if not authenticated.
@@ -48,7 +49,14 @@ export default function AppRouter() {
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
-      <Route path="/onboarding" element={<OnboardingPage />} />
+      <Route
+        path="/onboarding"
+        element={
+          <RequireAuth>
+            <OnboardingPage />
+          </RequireAuth>
+        }
+      />
 
       {/* Authenticated area shares the app layout */}
       <Route element={<AppLayout />}>
@@ -105,6 +113,14 @@ export default function AppRouter() {
           element={
             <RequireAuth>
               <ProfilePage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/knowledge"
+          element={
+            <RequireAuth>
+              <KnowledgeBasePage />
             </RequireAuth>
           }
         />

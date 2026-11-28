@@ -76,11 +76,12 @@ class LocationService:
 
         # Map schema fields (lat/lon) to model fields (latitude/longitude)
         create_data = location_data.model_dump()
+        raw_name = (create_data.get("name") or "").strip()[:100]
         location = LocationModel(
             user_id=user_id,
             latitude=create_data.get("lat"),
             longitude=create_data.get("lon"),
-            name=create_data.get("name"),
+            name=raw_name or "Saved location",
             city=create_data.get("city"),
             state=create_data.get("state"),
             country=create_data.get("country"),
@@ -263,7 +264,10 @@ class LocationService:
         try:
             geocode_results = await self.geocode_address(query, limit=limit)
         except Exception:
-            # Fallback to Geoapify if Nominatim fails (e.g., rate limited)
+            geocode_results = []
+
+        if not geocode_results:
+            # Fallback to Geoapify if Nominatim fails or returns nothing
             try:
                 geoapify_features = await self.geocode_address_geoapify(query, limit=limit)
                 geocode_results = [
@@ -272,7 +276,11 @@ class LocationService:
                         "lon": f["geometry"]["coordinates"][0],
                         "display_name": f["properties"].get("formatted", ""),
                         "address": {
-                            "city": f["properties"].get("city"),
+                            "city": (
+                                f["properties"].get("city")
+                                or f["properties"].get("town")
+                                or f["properties"].get("county")
+                            ),
                             "state": f["properties"].get("state"),
                             "country": f["properties"].get("country"),
                         },
@@ -285,12 +293,15 @@ class LocationService:
         geocode_formatted = [
             {
                 "id": None,
-                "name": r.get("display_name", "").split(",")[0],
+                "name": (r.get("display_name", "").split(",")[0].strip() or query)[:100],
                 "lat": float(r["lat"]),
                 "lon": float(r["lon"]),
-                "city": r.get("address", {}).get("city")
+                "city": (
+                    r.get("address", {}).get("city")
                     or r.get("address", {}).get("town")
-                    or r.get("address", {}).get("village"),
+                    or r.get("address", {}).get("village")
+                    or r.get("address", {}).get("state_district")
+                ),
                 "state": r.get("address", {}).get("state"),
                 "country": r.get("address", {}).get("country"),
                 "is_saved": False,
@@ -298,6 +309,7 @@ class LocationService:
                 "display_name": r.get("display_name"),
             }
             for r in geocode_results
+            if r.get("lat") is not None and r.get("lon") is not None
         ]
 
         # Combine and deduplicate

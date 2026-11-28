@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { to: '/recommendations', label: 'Recommendations', icon: 'bi-lightbulb' },
   { to: '/impact', label: 'Impact Tracker', icon: 'bi-graph-up-arrow' },
   { to: '/family', label: 'Family', icon: 'bi-people' },
+  { to: '/knowledge', label: 'Knowledge Base', icon: 'bi-journal-bookmark' },
   { to: '/profile', label: 'Profile / Settings', icon: 'bi-person-gear' },
 ];
 

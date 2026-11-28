@@ -11,22 +11,23 @@ from app.database.base import Base
 from app.core.config import get_settings
 
 # Import all models so they're registered with Base.metadata
-from app.modules.users.repository import UserModel
-from app.modules.user_profiles.repository import UserProfileModel
-from app.modules.locations.repository import LocationModel
-from app.modules.families.repository import FamilyModel
-from app.modules.family_members.repository import FamilyMemberModel
-from app.modules.air_quality_readings.repository import AirQualityReadingModel
-from app.modules.weather_readings.repository import WeatherReadingModel
-from app.modules.daily_routines.repository import DailyRoutineModel
-from app.modules.recommendations.repository import RecommendationModel
-from app.modules.user_actions.repository import UserActionModel
-from app.modules.emission_factors.repository import EmissionFactorModel
-from app.modules.impact_records.repository import ImpactRecordModel
-from app.modules.knowledge_documents.repository import KnowledgeDocumentModel
-from app.modules.document_chunks.repository import DocumentChunkModel
-from app.modules.chat_conversations.repository import ChatConversationModel
-from app.modules.chat_messages.repository import ChatMessageModel
+from app.modules.users.models import UserModel
+from app.modules.user_profiles.models import UserProfileModel
+from app.modules.locations.models import LocationModel
+from app.modules.families.models import FamilyModel
+from app.modules.family_members.models import FamilyMemberModel
+from app.modules.air_quality_readings.models import AirQualityReadingModel
+from app.modules.weather_readings.models import WeatherReadingModel
+from app.modules.daily_routines.models import DailyRoutineModel
+from app.modules.recommendations.models import RecommendationModel
+from app.modules.user_actions.models import UserActionModel
+from app.modules.emission_factors.models import EmissionFactorModel
+from app.modules.impact_records.models import ImpactRecordModel
+from app.modules.knowledge_documents.models import KnowledgeDocumentModel
+from app.modules.document_chunks.models import DocumentChunkModel
+from app.modules.chat_conversations.models import ChatConversationModel
+from app.modules.chat_messages.models import ChatMessageModel
+from app.modules.rag.models import KnowledgeAuditLogModel
 
 config = context.config
 

@@ -90,6 +90,8 @@ export default function LocationSearch({ onLocationSelect, selectedLocation, dis
       if (label) {
         setQuery(label);
       }
+    } else {
+      setQuery('');
     }
   }, [selectedLocation]);
 
@@ -137,7 +139,7 @@ export default function LocationSearch({ onLocationSelect, selectedLocation, dis
       {showDropdown && results.length > 0 && (
         <ul
           id="location-results"
-          className="dropdown-menu w-100 mt-1 shadow-sm"
+          className="dropdown-menu show w-100 mt-1 shadow-sm"
           style={{ maxHeight: '300px', overflowY: 'auto', zIndex: 1000 }}
           role="listbox"
         >
@@ -145,7 +147,7 @@ export default function LocationSearch({ onLocationSelect, selectedLocation, dis
             <li key={index}>
               <button
                 type="button"
-                className="dropdown-item d-flex flex-column align-items-start gap-1 text-start"
+                className="dropdown-item d-flex flex-column align-items-start gap-1 text-start text-wrap"
                 onClick={() => handleResultClick(location)}
                 role="option"
               >
@@ -155,7 +157,7 @@ export default function LocationSearch({ onLocationSelect, selectedLocation, dis
                 </small>
                 <small className="text-muted">
                   {location.lat?.toFixed(4)}, {location.lon?.toFixed(4)}
-                  {location.type && ` • ${location.type}`}
+                  {location.is_saved && ' • Saved'}
                 </small>
               </button>
             </li>
@@ -164,7 +166,7 @@ export default function LocationSearch({ onLocationSelect, selectedLocation, dis
       )}
 
       {showDropdown && !loading && results.length === 0 && query.length >= 2 && (
-        <ul className="dropdown-menu w-100 mt-1 shadow-sm" style={{ zIndex: 1000 }}>
+        <ul className="dropdown-menu show w-100 mt-1 shadow-sm" style={{ zIndex: 1000 }}>
           <li className="dropdown-item text-center text-supporting">
             No locations found for "{query}"
           </li>

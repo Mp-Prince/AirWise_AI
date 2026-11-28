@@ -74,12 +74,18 @@ export default function OnboardingPage() {
     setLoading(true);
     setError(null);
     try {
+      const resolvedName =
+        profileData.full_name.trim() ||
+        user?.full_name ||
+        user?.email?.split('@')[0] ||
+        'AirWise User';
+
       // Build profile data for API
       const apiData = {
-        full_name: profileData.full_name,
-        date_of_birth: profileData.date_of_birth || null,
+        full_name: resolvedName,
+        date_of_birth: profileData.date_of_birth ? `${profileData.date_of_birth}T00:00:00Z` : null,
         gender: profileData.gender || null,
-        height_cm: profileData.height_cm ? parseInt(profileData.height_cm) : null,
+        height_cm: profileData.height_cm ? parseInt(profileData.height_cm, 10) : null,
         weight_kg: profileData.weight_kg ? parseFloat(profileData.weight_kg) : null,
         health_conditions: profileData.health_conditions,
         sensitivities: profileData.sensitivities,
@@ -88,13 +94,13 @@ export default function OnboardingPage() {
         timezone: profileData.timezone,
       };
 
-      // Try upsert first (create or update)
       await profileApi.upsertProfile(apiData);
 
-      // If location selected, create/save it
-      if (selectedLocation) {
+      // If location selected and not already saved, create it (backend auto-syncs AQI + weather)
+      if (selectedLocation && !selectedLocation.is_saved) {
+        const rawName = selectedLocation.name || selectedLocation.display_name || 'Saved Location';
         const locationData = {
-          name: selectedLocation.name || selectedLocation.display_name,
+          name: rawName.slice(0, 100),
           lat: selectedLocation.lat,
           lon: selectedLocation.lon,
           city: selectedLocation.city,
@@ -103,13 +109,20 @@ export default function OnboardingPage() {
           is_default: true,
         };
         await environmentalApi.createLocation(locationData);
+      } else if (selectedLocation?.id && !selectedLocation.is_default) {
+        await environmentalApi.setDefaultLocation(selectedLocation.id);
       }
 
       setSuccess(true);
       // Navigate to dashboard after short delay
-      setTimeout(() => navigate('/dashboard'), 1500);
+      setTimeout(() => navigate('/dashboard'), 1200);
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to save profile. Please try again.');
+      const detail = err.response?.data?.detail;
+      setError(
+        Array.isArray(detail)
+          ? detail.map((d) => d.msg).join(', ')
+          : detail || 'Failed to save profile. Please try again.',
+      );
     } finally {
       setLoading(false);
     }
@@ -156,11 +169,10 @@ export default function OnboardingPage() {
         />
         {selectedLocation && (
           <div className="alert alert-success mt-3 mb-0 small">
-            <svg className="bi me-1" width="16" height="16"><use xlinkHref="#check-circle" /></svg>
-            Selected: <strong>{selectedLocation.display_name}</strong>
+            <i className="bi bi-check-circle me-1" aria-hidden="true" />
+            Selected: <strong>{selectedLocation.display_name || selectedLocation.name}</strong>
             <div className="text-muted mt-1">
               Coordinates: {selectedLocation.lat?.toFixed(4)}, {selectedLocation.lon?.toFixed(4)}
-              {selectedLocation.type && ` • Type: ${selectedLocation.type}`}
               {selectedLocation.city && ` • City: ${selectedLocation.city}`}
               {selectedLocation.state && ` • State: ${selectedLocation.state}`}
               {selectedLocation.country && ` • Country: ${selectedLocation.country}`}

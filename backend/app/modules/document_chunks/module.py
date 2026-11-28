@@ -1,8 +1,8 @@
-"""Document chunk routes (Phase 4)."""
+"""Document chunk API module (Phase 4)."""
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.connection import get_async_session
@@ -12,8 +12,8 @@ from app.modules.document_chunks.schema import (
     RetrievalResponse,
 )
 from app.modules.document_chunks.service import DocumentChunkService
-from app.modules.users.routes import get_current_active_user
 from app.modules.users.models import UserModel
+from app.modules.users.routes import get_current_active_user
 
 router = APIRouter(tags=["document-chunks"])
 
@@ -33,6 +33,7 @@ async def get_document_chunks(
             id=chunk.id,
             document_id=chunk.document_id,
             chunk_index=chunk.chunk_index,
+            page_number=chunk.page_number,
             content=chunk.content,
             token_count=chunk.token_count,
             created_at=chunk.created_at.isoformat() if chunk.created_at else "",
@@ -49,4 +50,7 @@ async def retrieve_chunks(
 ):
     """Perform semantic retrieval on document chunks."""
     service = DocumentChunkService(session)
-    return await service.retrieve(request)
+    try:
+        return await service.retrieve(request)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))

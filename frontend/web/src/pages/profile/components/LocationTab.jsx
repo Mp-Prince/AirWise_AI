@@ -73,8 +73,9 @@ export default function LocationTab({
                         className="btn btn-outline-danger btn-sm"
                         onClick={() => handleDeleteLocation(loc.id)}
                         disabled={saving}
+                        aria-label={`Delete ${loc.name}`}
                       >
-                        <svg className="bi" width="16" height="16"><use xlinkHref="#trash" /></svg>
+                        <i className="bi bi-trash" aria-hidden="true" />
                       </button>
                     )}
                   </td>
@@ -98,8 +99,8 @@ export default function LocationTab({
       />
       {selectedLocation && (
         <div className="alert alert-success mt-3 mb-0 small">
-          <svg className="bi me-1" width="16" height="16"><use xlinkHref="#check-circle" /></svg>
-          Selected: <strong>{selectedLocation.display_name}</strong>
+          <i className="bi bi-check-circle me-1" aria-hidden="true" />
+          Selected: <strong>{selectedLocation.display_name || selectedLocation.name}</strong>
           <div className="text-muted mt-1">
             Coordinates: {selectedLocation.lat?.toFixed(4)}, {selectedLocation.lon?.toFixed(4)}
             {selectedLocation.city && ` • City: ${selectedLocation.city}`}

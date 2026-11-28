@@ -1,52 +1,69 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../../app/providers/AuthProvider.jsx';
 import environmentalApi from '../../../services/environmentalApi';
 import DataFreshnessLabel from '../../../components/common/DataFreshnessLabel.jsx';
 
 /**
  * AQI Hero card - shows current AQI with category, color, and health advisory.
- * Fetches real data from backend via environmentalApi.
+ * Fetches real data from backend via environmentalApi and triggers OpenAQ sync on refresh.
  */
-export default function AQIHero() {
+export default function AQIHero({ onDataLoaded }) {
   const { user } = useAuth();
+  const [location, setLocation] = useState(null);
   const [aqiData, setAqiData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchAQI = async () => {
+  const fetchAQI = useCallback(async (forceSync = false) => {
     if (!user) return;
     try {
-      setLoading(true);
-      // First get default location
+      if (!forceSync) setLoading(true);
       const locations = await environmentalApi.getLocations();
-      const defaultLocation = locations.locations.find(l => l.is_default) || locations.locations[0];
+      const defaultLocation =
+        locations.locations.find((l) => l.is_default) || locations.locations[0];
 
       if (!defaultLocation) {
+        setLocation(null);
         setAqiData(null);
+        setError(null);
         return;
       }
 
-      // Fetch AQI info
+      setLocation(defaultLocation);
+
+      if (forceSync) {
+        await environmentalApi.syncAQIData(defaultLocation.id);
+      }
+
       const aqiInfo = await environmentalApi.getCurrentAQIInfo(defaultLocation.id);
       setAqiData(aqiInfo);
       setError(null);
+      if (onDataLoaded) {
+        onDataLoaded({ location: defaultLocation, reading: aqiInfo.reading });
+      }
     } catch (err) {
-      setError('Failed to load air quality data');
+      const detail = err.response?.data?.detail;
+      setError(
+        typeof detail === 'string'
+          ? detail
+          : 'Failed to load air quality data. Try refreshing.',
+      );
       setAqiData(null);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [user, onDataLoaded]);
 
   useEffect(() => {
-    fetchAQI();
-  }, [user]);
+    fetchAQI(false);
+  }, [fetchAQI]);
 
   const handleRefresh = () => {
     setRefreshing(true);
-    fetchAQI();
+    fetchAQI(true);
   };
 
   if (loading) {
@@ -61,21 +78,41 @@ export default function AQIHero() {
     );
   }
 
+  if (!location) {
+    return (
+      <div className="card shadow-sm">
+        <div className="card-body text-center py-5">
+          <i className="bi bi-geo-alt text-muted fs-1 d-block mb-2" aria-hidden="true" />
+          <h5 className="text-body-secondary">No location selected</h5>
+          <p className="text-supporting small mb-3">
+            Add a home city to see live air quality readings from OpenAQ.
+          </p>
+          <Link to="/profile" className="btn btn-primary btn-sm">
+            Set location
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   if (error || !aqiData) {
     return (
       <div className="card shadow-sm">
         <div className="card-body text-center py-5">
-          <svg className="bi text-muted mb-3" width="48" height="48"><use xlinkHref="#exclamation-triangle" /></svg>
-          <h5 className="text-body-secondary">No air quality data yet</h5>
+          <i className="bi bi-exclamation-triangle text-warning fs-1 d-block mb-2" aria-hidden="true" />
+          <h5 className="text-body-secondary">Air quality data unavailable</h5>
+          <p className="text-supporting small mb-1">
+            Location: <strong>{location.name}</strong>
+          </p>
           <p className="text-supporting small mb-3">
-            {error || 'Add a location in onboarding to see live AQI from OpenAQ.'}
+            {error || 'No recent OpenAQ readings found near this location.'}
           </p>
           <button
             className="btn btn-outline-primary btn-sm"
             onClick={handleRefresh}
             disabled={refreshing}
           >
-            {refreshing ? 'Refreshing...' : 'Retry'}
+            {refreshing ? 'Syncing...' : 'Sync OpenAQ Now'}
           </button>
         </div>
       </div>
@@ -85,13 +122,24 @@ export default function AQIHero() {
   const { reading, aqi_info, data_age_minutes, is_stale } = aqiData;
   const { category, color, health_advisory } = aqi_info;
 
+  const pollutants = [
+    { label: 'PM2.5', value: reading.pm25, unit: 'µg/m³' },
+    { label: 'PM10', value: reading.pm10, unit: 'µg/m³' },
+    { label: 'O₃', value: reading.o3, unit: 'µg/m³' },
+    { label: 'NO₂', value: reading.no2, unit: 'µg/m³' },
+    { label: 'SO₂', value: reading.so2, unit: 'µg/m³' },
+    { label: 'CO', value: reading.co, unit: 'mg/m³' },
+  ].filter((p) => p.value !== null && p.value !== undefined);
+
   return (
     <div className="card shadow-sm">
       <div className="card-body">
         <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-3">
           <div>
-            <h2 className="section-heading mb-1">Current Air Quality</h2>
-            <DataFreshnessLabel fetchedAt={reading?.measured_at} />
+            <h2 className="section-heading mb-1">
+              Current Air Quality · <span className="text-primary">{location.city || location.name}</span>
+            </h2>
+            <DataFreshnessLabel fetchedAt={reading?.measured_at} source={reading?.provider} />
           </div>
           <button
             className="btn btn-outline-secondary btn-sm"
@@ -99,9 +147,15 @@ export default function AQIHero() {
             disabled={refreshing}
           >
             {refreshing ? (
-              <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true" />
+              <>
+                <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true" />
+                Syncing...
+              </>
             ) : (
-              'Refresh'
+              <>
+                <i className="bi bi-arrow-clockwise me-1" aria-hidden="true" />
+                Refresh
+              </>
             )}
           </button>
         </div>
@@ -143,45 +197,23 @@ export default function AQIHero() {
               <p className="mb-0">{health_advisory}</p>
             </div>
 
-            <div className="row g-3 mt-3">
-              {reading.pm25 !== null && reading.pm25 !== undefined && (
-                <div className="col-6 col-lg-3">
-                  <div className="bg-light rounded p-2 text-center">
-                    <div className="text-supporting small">PM2.5</div>
-                    <div className="fw-bold">{reading.pm25} µg/m³</div>
+            {pollutants.length > 0 && (
+              <div className="row g-2 mt-2">
+                {pollutants.map((p) => (
+                  <div className="col-6 col-lg-4" key={p.label}>
+                    <div className="bg-light rounded p-2 text-center">
+                      <div className="text-supporting small">{p.label}</div>
+                      <div className="fw-bold">{p.value} {p.unit}</div>
+                    </div>
                   </div>
-                </div>
-              )}
-              {reading.pm10 !== null && reading.pm10 !== undefined && (
-                <div className="col-6 col-lg-3">
-                  <div className="bg-light rounded p-2 text-center">
-                    <div className="text-supporting small">PM10</div>
-                    <div className="fw-bold">{reading.pm10} µg/m³</div>
-                  </div>
-                </div>
-              )}
-              {reading.o3 !== null && reading.o3 !== undefined && (
-                <div className="col-6 col-lg-3">
-                  <div className="bg-light rounded p-2 text-center">
-                    <div className="text-supporting small">O₃</div>
-                    <div className="fw-bold">{reading.o3} µg/m³</div>
-                  </div>
-                </div>
-              )}
-              {reading.no2 !== null && reading.no2 !== undefined && (
-                <div className="col-6 col-lg-3">
-                  <div className="bg-light rounded p-2 text-center">
-                    <div className="text-supporting small">NO₂</div>
-                    <div className="fw-bold">{reading.no2} µg/m³</div>
-                  </div>
-                </div>
-              )}
-            </div>
+                ))}
+              </div>
+            )}
 
             {is_stale && (
               <div className="alert alert-warning mt-3 mb-0 small">
-                <svg className="bi me-1" width="16" height="16"><use xlinkHref="#exclamation-triangle" /></svg>
-                Data is {data_age_minutes} minutes old — consider refreshing for latest readings.
+                <i className="bi bi-exclamation-triangle me-1" aria-hidden="true" />
+                Data is {data_age_minutes} minutes old — click Refresh to check for newer readings.
               </div>
             )}
           </div>

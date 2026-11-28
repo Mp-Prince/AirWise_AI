@@ -1,5 +1,5 @@
 """Air quality reading routes (Phase 3)."""
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Annotated, Optional
 from uuid import UUID
 
@@ -140,14 +140,36 @@ async def get_current_aqi_info(
 
     service = AirQualityService(session)
     reading = await service.get_latest_reading(location_id, provider)
+    if not reading and not provider:
+        try:
+            synced = await service.sync_location_data(location_id)
+            if synced > 0:
+                await session.commit()
+                reading = await service.get_latest_reading(location_id)
+        except Exception as exc:
+            await session.rollback()
+            raise HTTPException(
+                status_code=502,
+                detail=f"Failed to sync air quality data from OpenAQ: {str(exc)}",
+            )
+
     if not reading:
-        raise HTTPException(status_code=404, detail="No air quality data available for this location")
+        raise HTTPException(
+            status_code=404,
+            detail="No air quality monitoring readings available near this location",
+        )
 
     aqi_info = service.get_aqi_info(reading.aqi_value, reading.aqi_standard)
+    measured_at = (
+        reading.measured_at
+        if reading.measured_at.tzinfo
+        else reading.measured_at.replace(tzinfo=timezone.utc)
+    )
+    age_seconds = max(0.0, (datetime.now(timezone.utc) - measured_at).total_seconds())
 
     return {
         "reading": reading,
         "aqi_info": aqi_info.model_dump(),
-        "data_age_minutes": int((datetime.now(reading.measured_at.tzinfo) - reading.measured_at).total_seconds() / 60),
-        "is_stale": (datetime.now(reading.measured_at.tzinfo) - reading.measured_at).total_seconds() > 3600,  # > 1 hour
+        "data_age_minutes": int(age_seconds / 60),
+        "is_stale": age_seconds > 3600,  # > 1 hour
     }

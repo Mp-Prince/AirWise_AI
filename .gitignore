@@ -35,4 +35,3 @@ tmp/
 backend/create_db.py
 ensure_db.py
 test_server.py
-alembic

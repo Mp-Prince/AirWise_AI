@@ -23,7 +23,7 @@ export default function RegisterPage() {
 
     try {
       await register(formData.full_name, formData.email, formData.password);
-      navigate('/dashboard');
+      navigate('/onboarding');
     } catch (err) {
       // Error is handled by auth provider
     }

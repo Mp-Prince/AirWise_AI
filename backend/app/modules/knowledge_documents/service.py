@@ -1,48 +1,63 @@
 """Knowledge document service (Phase 4)."""
+import base64
 import hashlib
+import io
 import uuid
 from typing import Optional
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, delete
-from sqlalchemy.orm import selectinload
 
-from app.modules.knowledge_documents.models import KnowledgeDocumentModel
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.integrations.embedding_provider import generate_embeddings_batch
 from app.modules.document_chunks.models import DocumentChunkModel
+from app.modules.document_chunks.repository import DocumentChunkRepository
+from app.modules.knowledge_documents.models import KnowledgeDocumentModel
+from app.modules.knowledge_documents.repository import KnowledgeDocumentRepository
 from app.modules.knowledge_documents.schema import (
-    KnowledgeDocumentCreate,
-    KnowledgeDocumentUpdate,
-    KnowledgeDocumentResponse,
-    KnowledgeDocumentListResponse,
     DocumentIngestRequest,
     DocumentIngestResponse,
+    KnowledgeDocumentCreate,
+    KnowledgeDocumentListResponse,
+    KnowledgeDocumentResponse,
+    KnowledgeDocumentUpdate,
 )
 
-# Chunking configuration
-CHUNK_SIZE = 512  # tokens (approximate)
-CHUNK_OVERLAP = 50  # tokens
+# Chunking configuration (approximate word tokens)
+CHUNK_SIZE = 512
+CHUNK_OVERLAP = 50
 
 
 class KnowledgeDocumentService:
-    """Service for knowledge document operations."""
+    """Business logic for knowledge document management and ingestion."""
 
     def __init__(self, session: AsyncSession):
         self.session = session
+        self.repo = KnowledgeDocumentRepository(session)
+        self.chunk_repo = DocumentChunkRepository(session)
+
+    def _to_response(self, doc: KnowledgeDocumentModel, chunk_count: int) -> KnowledgeDocumentResponse:
+        return KnowledgeDocumentResponse(
+            id=doc.id,
+            title=doc.title,
+            source_url=doc.source_url,
+            source_type=doc.source_type,
+            content_hash=doc.content_hash,
+            full_text=doc.full_text,
+            metadata_json=doc.metadata_json,
+            created_at=doc.created_at.isoformat() if doc.created_at else "",
+            updated_at=doc.updated_at.isoformat() if doc.updated_at else "",
+            is_active=getattr(doc, "is_active", True),
+            chunk_count=chunk_count,
+        )
 
     async def get_by_id(self, doc_id: uuid.UUID) -> Optional[KnowledgeDocumentModel]:
-        """Get document by ID with chunk count."""
-        result = await self.session.execute(
-            select(KnowledgeDocumentModel)
-            .where(KnowledgeDocumentModel.id == doc_id)
-            .options(selectinload(KnowledgeDocumentModel.chunks))
-        )
-        return result.scalars().first()
+        return await self.repo.get_by_id(doc_id)
 
-    async def get_by_content_hash(self, content_hash: str) -> Optional[KnowledgeDocumentModel]:
-        """Get document by content hash."""
-        result = await self.session.execute(
-            select(KnowledgeDocumentModel).where(KnowledgeDocumentModel.content_hash == content_hash)
-        )
-        return result.scalars().first()
+    async def get_response_by_id(self, doc_id: uuid.UUID) -> Optional[KnowledgeDocumentResponse]:
+        doc = await self.repo.get_by_id(doc_id)
+        if not doc:
+            return None
+        chunk_count = await self.chunk_repo.count_by_document(doc.id)
+        return self._to_response(doc, chunk_count)
 
     async def list_documents(
         self,
@@ -51,49 +66,14 @@ class KnowledgeDocumentService:
         source_type: Optional[str] = None,
         is_active: Optional[bool] = None,
     ) -> KnowledgeDocumentListResponse:
-        """List documents with pagination and filters."""
-        query = select(KnowledgeDocumentModel)
-        count_query = select(func.count(KnowledgeDocumentModel.id))
-
-        if source_type:
-            query = query.where(KnowledgeDocumentModel.source_type == source_type)
-            count_query = count_query.where(KnowledgeDocumentModel.source_type == source_type)
-
-        if is_active is not None:
-            query = query.where(KnowledgeDocumentModel.is_active == is_active)
-            count_query = count_query.where(KnowledgeDocumentModel.is_active == is_active)
-
-        query = query.order_by(KnowledgeDocumentModel.created_at.desc())
-        query = query.offset((page - 1) * page_size).limit(page_size)
-
-        result = await self.session.execute(query)
-        documents = result.scalars().all()
-
-        count_result = await self.session.execute(count_query)
-        total = count_result.scalar() or 0
-
-        # Get chunk counts for each document
-        doc_responses = []
-        for doc in documents:
-            chunk_count_result = await self.session.execute(
-                select(func.count(DocumentChunkModel.id)).where(DocumentChunkModel.document_id == doc.id)
-            )
-            chunk_count = chunk_count_result.scalar() or 0
-
-            doc_responses.append(KnowledgeDocumentResponse(
-                id=doc.id,
-                title=doc.title,
-                source_url=doc.source_url,
-                source_type=doc.source_type,
-                content_hash=doc.content_hash,
-                full_text=doc.full_text,
-                metadata_json=doc.metadata_json,
-                created_at=doc.created_at.isoformat() if doc.created_at else "",
-                updated_at=doc.updated_at.isoformat() if doc.updated_at else "",
-                is_active=getattr(doc, 'is_active', True),
-                chunk_count=chunk_count,
-            ))
-
+        documents, total = await self.repo.list_paginated(
+            page=page,
+            page_size=page_size,
+            source_type=source_type,
+            is_active=is_active,
+        )
+        counts = await self.repo.get_chunk_counts([doc.id for doc in documents])
+        doc_responses = [self._to_response(doc, counts.get(doc.id, 0)) for doc in documents]
         return KnowledgeDocumentListResponse(
             documents=doc_responses,
             total=total,
@@ -102,11 +82,8 @@ class KnowledgeDocumentService:
         )
 
     async def create(self, doc_data: KnowledgeDocumentCreate) -> KnowledgeDocumentModel:
-        """Create a new knowledge document."""
-        content_hash = hashlib.sha256(doc_data.content.encode()).hexdigest()
-
-        # Check for duplicate
-        existing = await self.get_by_content_hash(content_hash)
+        content_hash = hashlib.sha256(doc_data.content.encode("utf-8")).hexdigest()
+        existing = await self.repo.get_by_content_hash(content_hash)
         if existing:
             return existing
 
@@ -118,13 +95,12 @@ class KnowledgeDocumentService:
             full_text=doc_data.content,
             metadata_json=doc_data.metadata_json,
         )
-        self.session.add(doc)
-        await self.session.flush()
-        return doc
+        return await self.repo.add(doc)
 
-    async def update(self, doc_id: uuid.UUID, doc_data: KnowledgeDocumentUpdate) -> Optional[KnowledgeDocumentModel]:
-        """Update a knowledge document."""
-        doc = await self.get_by_id(doc_id)
+    async def update(
+        self, doc_id: uuid.UUID, doc_data: KnowledgeDocumentUpdate
+    ) -> Optional[KnowledgeDocumentResponse]:
+        doc = await self.repo.get_by_id(doc_id)
         if not doc:
             return None
 
@@ -134,53 +110,58 @@ class KnowledgeDocumentService:
                 setattr(doc, field, value)
 
         await self.session.flush()
-        return doc
+        chunk_count = await self.chunk_repo.count_by_document(doc.id)
+        return self._to_response(doc, chunk_count)
 
     async def delete(self, doc_id: uuid.UUID) -> bool:
-        """Delete a knowledge document and its chunks."""
-        doc = await self.get_by_id(doc_id)
+        doc = await self.repo.get_by_id(doc_id)
         if not doc:
             return False
-
-        # Delete chunks first (cascade should handle this, but explicit is safer)
-        await self.session.execute(
-            delete(DocumentChunkModel).where(DocumentChunkModel.document_id == doc_id)
-        )
-        await self.session.delete(doc)
-        await self.session.flush()
+        await self.chunk_repo.delete_by_document(doc_id)
+        await self.repo.delete(doc)
         return True
 
     def _chunk_text(self, text: str) -> list[str]:
-        """Split text into overlapping chunks."""
+        """Split text into overlapping word chunks."""
         words = text.split()
+        if not words:
+            return []
         if len(words) <= CHUNK_SIZE:
-            return [text]
+            return [" ".join(words)]
 
         chunks = []
         start = 0
         while start < len(words):
             end = min(start + CHUNK_SIZE, len(words))
-            chunk = " ".join(words[start:end])
-            chunks.append(chunk)
+            chunks.append(" ".join(words[start:end]))
             if end >= len(words):
                 break
             start = end - CHUNK_OVERLAP
-
         return chunks
 
-    async def ingest_document(self, request: DocumentIngestRequest) -> DocumentIngestResponse:
-        """Ingest a document: extract text, chunk, generate embeddings, store."""
-        content = request.content
+    def _chunk_pages(self, pages: list[tuple[Optional[int], str]]) -> list[tuple[Optional[int], str]]:
+        """Chunk extracted text while preserving source page number metadata."""
+        chunked: list[tuple[Optional[int], str]] = []
+        for page_num, page_text in pages:
+            for chunk_text in self._chunk_text(page_text):
+                chunked.append((page_num, chunk_text))
+        return chunked
 
-        # Extract text from different sources
+    async def ingest_document(self, request: DocumentIngestRequest) -> DocumentIngestResponse:
+        """Ingest a document: extract text, chunk with page metadata, embed, and store."""
+        pages: list[tuple[Optional[int], str]] = []
+
         if request.file_content:
-            # Base64 encoded PDF
-            import base64
             pdf_bytes = base64.b64decode(request.file_content)
-            content = self._extract_pdf_text(pdf_bytes)
+            pages = self._extract_pdf_pages(pdf_bytes)
+            content = "\n\n".join(text for _, text in pages)
         elif request.source_url and request.source_type == "web":
             content = await self._fetch_web_content(request.source_url)
-        elif not content:
+            pages = [(None, content)]
+        elif request.content:
+            content = request.content
+            pages = [(None, content)]
+        else:
             return DocumentIngestResponse(
                 document_id=uuid.uuid4(),
                 title=request.title,
@@ -189,61 +170,80 @@ class KnowledgeDocumentService:
                 message="No content provided",
             )
 
-        # Create document
-        doc_data = KnowledgeDocumentCreate(
-            title=request.title,
-            source_url=request.source_url,
-            source_type=request.source_type,
-            content=content,
-            metadata_json=request.metadata_json,
-        )
-        doc = await self.create(doc_data)
+        if not content.strip():
+            return DocumentIngestResponse(
+                document_id=uuid.uuid4(),
+                title=request.title,
+                chunks_created=0,
+                status="error",
+                message="Extracted document content is empty",
+            )
 
-        # Chunk the content
-        chunks = self._chunk_text(content)
+        content_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
+        existing = await self.repo.get_by_content_hash(content_hash)
+        if existing:
+            existing_chunks = await self.chunk_repo.count_by_document(existing.id)
+            if existing_chunks > 0:
+                return DocumentIngestResponse(
+                    document_id=existing.id,
+                    title=existing.title,
+                    chunks_created=0,
+                    status="duplicate",
+                    message=f"Document already ingested ({existing_chunks} chunks exist)",
+                )
+            doc = existing
+        else:
+            doc = await self.create(
+                KnowledgeDocumentCreate(
+                    title=request.title,
+                    source_url=request.source_url,
+                    source_type=request.source_type,
+                    content=content,
+                    metadata_json=request.metadata_json,
+                )
+            )
 
-        # Generate embeddings and store chunks
-        chunks_created = 0
-        for i, chunk_text in enumerate(chunks):
-            embedding = await self._generate_embedding(chunk_text)
+        chunk_items = self._chunk_pages(pages)
+        embeddings = await generate_embeddings_batch([text for _, text in chunk_items])
 
-            chunk = DocumentChunkModel(
+        chunk_models = [
+            DocumentChunkModel(
                 document_id=doc.id,
                 chunk_index=i,
+                page_number=page_num,
                 content=chunk_text,
                 embedding=embedding,
                 token_count=len(chunk_text.split()),
             )
-            self.session.add(chunk)
-            chunks_created += 1
-
-        await self.session.flush()
+            for i, ((page_num, chunk_text), embedding) in enumerate(zip(chunk_items, embeddings))
+        ]
+        await self.chunk_repo.add_many(chunk_models)
 
         return DocumentIngestResponse(
             document_id=doc.id,
             title=doc.title,
-            chunks_created=chunks_created,
+            chunks_created=len(chunk_models),
             status="success",
-            message=f"Document ingested with {chunks_created} chunks",
+            message=f"Document ingested with {len(chunk_models)} chunks",
         )
 
-    def _extract_pdf_text(self, pdf_bytes: bytes) -> str:
-        """Extract text from PDF bytes."""
+    def _extract_pdf_pages(self, pdf_bytes: bytes) -> list[tuple[int, str]]:
+        """Extract text from PDF bytes page-by-page, preserving 1-based page numbers."""
         try:
             import pypdf
-            import io
+
             reader = pypdf.PdfReader(io.BytesIO(pdf_bytes))
-            text_parts = []
-            for page in reader.pages:
-                text = page.extract_text()
+            pages: list[tuple[int, str]] = []
+            for idx, page in enumerate(reader.pages, start=1):
+                text = (page.extract_text() or "").strip()
                 if text:
-                    text_parts.append(text)
-            return "\n\n".join(text_parts)
-        except Exception as e:
-            raise ValueError(f"Failed to extract PDF text: {str(e)}")
+                    pages.append((idx, text))
+            return pages
+        except Exception as exc:
+            raise ValueError(f"Failed to extract PDF text: {exc}") from exc
 
     async def _fetch_web_content(self, url: str) -> str:
-        """Fetch and extract text from web URL."""
+        """Fetch and extract readable text from a web URL."""
         try:
             import httpx
             from bs4 import BeautifulSoup
@@ -252,49 +252,9 @@ class KnowledgeDocumentService:
                 response = await client.get(url, follow_redirects=True)
                 response.raise_for_status()
 
-            soup = BeautifulSoup(response.text, 'html.parser')
-
-            # Remove script and style elements
-            for script in soup(["script", "style", "nav", "footer", "header"]):
-                script.decompose()
-
-            # Get text
-            text = soup.get_text(separator='\n', strip=True)
-            return text
-        except Exception as e:
-            raise ValueError(f"Failed to fetch web content: {str(e)}")
-
-    async def _generate_embedding(self, text: str) -> list[float]:
-        """Generate embedding for text using sentence-transformers."""
-        try:
-            from sentence_transformers import SentenceTransformer
-            # Use a small, fast model for embeddings
-            model = SentenceTransformer('all-MiniLM-L6-v2')
-            embedding = model.encode(text, convert_to_numpy=True)
-            return embedding.tolist()
-        except Exception as e:
-            # Return zero vector as fallback (should not happen in production)
-            return [0.0] * 384  # all-MiniLM-L6-v2 dimension
-
-
-class DocumentChunkService:
-    """Service for document chunk operations."""
-
-    def __init__(self, session: AsyncSession):
-        self.session = session
-
-    async def get_chunks_for_document(self, document_id: uuid.UUID) -> list[DocumentChunkModel]:
-        """Get all chunks for a document."""
-        result = await self.session.execute(
-            select(DocumentChunkModel)
-            .where(DocumentChunkModel.document_id == document_id)
-            .order_by(DocumentChunkModel.chunk_index)
-        )
-        return result.scalars().all()
-
-    async def delete_chunks_for_document(self, document_id: uuid.UUID) -> int:
-        """Delete all chunks for a document."""
-        result = await self.session.execute(
-            delete(DocumentChunkModel).where(DocumentChunkModel.document_id == document_id)
-        )
-        return result.rowcount
+            soup = BeautifulSoup(response.text, "html.parser")
+            for tag in soup(["script", "style", "nav", "footer", "header"]):
+                tag.decompose()
+            return soup.get_text(separator="\n", strip=True)
+        except Exception as exc:
+            raise ValueError(f"Failed to fetch web content: {exc}") from exc

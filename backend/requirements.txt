@@ -16,3 +16,12 @@ python-jose[cryptography]
 
 # Phase 3: Environmental data integration
 httpx
+
+# Phase 4: RAG knowledge base and semantic search
+sentence-transformers
+beautifulsoup4
+pypdf
+
+# Testing
+pytest
+pytest-asyncio

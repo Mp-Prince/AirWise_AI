@@ -1,4 +1,5 @@
 """Location routes (Phase 3)."""
+import logging
 from typing import Annotated
 from uuid import UUID
 
@@ -17,8 +18,12 @@ from app.modules.locations.schema import (
 from app.modules.locations.service import LocationService
 from app.modules.users.routes import get_current_active_user
 from app.modules.users.models import UserModel
+from app.modules.air_quality_readings.schema import AirQualityReadingResponse
 from app.modules.air_quality_readings.service import AirQualityService
+from app.modules.weather_readings.schema import WeatherReadingResponse
 from app.modules.weather_readings.service import WeatherService
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["locations"])
 
@@ -67,10 +72,27 @@ async def create_location(
     current_user: Annotated[UserModel, Depends(get_current_active_user)],
     session: Annotated[AsyncSession, Depends(get_async_session)],
 ):
-    """Create a new location for the current user."""
+    """Create a new location for the current user and sync initial environmental data."""
     service = LocationService(session)
     location = await service.create(current_user.id, location_data)
     await session.commit()
+    await session.refresh(location)
+
+    # Best-effort initial sync so dashboard has readings immediately after onboarding
+    try:
+        await AirQualityService(session).sync_location_data(location.id)
+        await session.commit()
+    except Exception as exc:
+        await session.rollback()
+        logger.warning("Initial AQI sync failed for location %s: %s", location.id, exc)
+
+    try:
+        await WeatherService(session).sync_location_data(location.id)
+        await session.commit()
+    except Exception as exc:
+        await session.rollback()
+        logger.warning("Initial weather sync failed for location %s: %s", location.id, exc)
+
     return location
 
 
@@ -86,17 +108,25 @@ async def get_location(
     if not location or location.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Location not found")
 
-    # Get latest AQI and weather
     aqi_service = AirQualityService(session)
     weather_service = WeatherService(session)
 
     latest_aqi = await aqi_service.get_latest_reading(location_id)
     latest_weather = await weather_service.get_latest_reading(location_id)
 
+    loc_data = LocationResponse.model_validate(location).model_dump()
     return LocationWithEnvironmentalData(
-        **location.__dict__,
-        latest_aqi=latest_aqi.__dict__ if latest_aqi else None,
-        latest_weather=latest_weather.__dict__ if latest_weather else None,
+        **loc_data,
+        latest_aqi=(
+            AirQualityReadingResponse.model_validate(latest_aqi).model_dump()
+            if latest_aqi
+            else None
+        ),
+        latest_weather=(
+            WeatherReadingResponse.model_validate(latest_weather).model_dump()
+            if latest_weather
+            else None
+        ),
     )
 
 

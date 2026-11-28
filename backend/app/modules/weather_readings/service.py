@@ -1,5 +1,6 @@
-"""Weather data service with OpenWeatherMap integration and caching."""
+"""Weather data service with OpenWeatherMap primary and Open-Meteo fallback."""
 from datetime import datetime, timezone
+import logging
 from typing import Optional
 from uuid import UUID
 
@@ -7,17 +8,16 @@ import httpx
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database.connection import get_async_session_factory
 from app.modules.weather_readings.models import WeatherReadingModel
 from app.modules.weather_readings.schema import WeatherReadingCreate, get_weather_description, get_uv_advisory
 from app.modules.locations.models import LocationModel
 from app.core.config import get_settings
 
-settings = get_settings()
+logger = logging.getLogger(__name__)
 
-# OpenWeatherMap API endpoints
+# External Weather API endpoints
 OPENWEATHER_BASE_URL = "https://api.openweathermap.org/data/2.5"
-OPENWEATHER_GEO_URL = "http://api.openweathermap.org/geo/1.0"
+OPENMETEO_BASE_URL = "https://api.open-meteo.com/v1"
 
 # Weather code mapping (WMO codes used by OpenWeatherMap)
 WMO_CODES = {
@@ -117,6 +117,7 @@ class WeatherService:
         longitude: float,
     ) -> Optional[WeatherReadingCreate]:
         """Fetch current weather data from OpenWeatherMap for a location."""
+        settings = get_settings()
         if not settings.OPENWEATHERMAP_API_KEY:
             raise ValueError("OpenWeatherMap API key not configured (use OPENWEATHERMAP_API_KEY)")
 
@@ -127,7 +128,7 @@ class WeatherService:
             "units": "metric",
         }
 
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=20.0) as client:
             response = await client.get(
                 f"{OPENWEATHER_BASE_URL}/weather",
                 params=params,
@@ -137,13 +138,80 @@ class WeatherService:
 
         return self._parse_openweather_response(data)
 
+    async def fetch_from_openmeteo(
+        self,
+        latitude: float,
+        longitude: float,
+    ) -> Optional[WeatherReadingCreate]:
+        """Fetch current weather data from Open-Meteo (free fallback, includes UV & WMO codes)."""
+        params = {
+            "latitude": latitude,
+            "longitude": longitude,
+            "current": (
+                "temperature_2m,relative_humidity_2m,pressure_msl,"
+                "wind_speed_10m,wind_direction_10m,precipitation,"
+                "cloud_cover,weather_code"
+            ),
+            "hourly": "uv_index",
+            "forecast_days": 1,
+            "timezone": "UTC",
+        }
+
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            response = await client.get(f"{OPENMETEO_BASE_URL}/forecast", params=params)
+            response.raise_for_status()
+            data = response.json()
+
+        current = data.get("current", {})
+        if not current:
+            return None
+
+        time_str = current.get("time")
+        measured_at = (
+            datetime.fromisoformat(time_str).replace(tzinfo=timezone.utc)
+            if time_str
+            else datetime.now(timezone.utc)
+        )
+
+        # Match closest hourly UV index if available
+        uv_index = None
+        hourly = data.get("hourly", {})
+        hourly_times = hourly.get("time") or []
+        hourly_uv = hourly.get("uv_index") or []
+        if time_str and hourly_times and hourly_uv:
+            hour_prefix = time_str[:13]  # YYYY-MM-DDTHH
+            for idx, ht in enumerate(hourly_times):
+                if ht.startswith(hour_prefix) and idx < len(hourly_uv):
+                    uv_index = hourly_uv[idx]
+                    break
+
+        # Open-Meteo wind_speed_10m defaults to km/h -> convert to m/s
+        wind_kmh = current.get("wind_speed_10m")
+        wind_ms = round(wind_kmh / 3.6, 1) if wind_kmh is not None else None
+
+        return WeatherReadingCreate(
+            location_id=UUID(int=0),
+            provider="Open-Meteo",
+            temperature_c=current.get("temperature_2m"),
+            humidity_pct=current.get("relative_humidity_2m"),
+            pressure_hpa=current.get("pressure_msl"),
+            wind_speed_ms=wind_ms,
+            wind_direction_deg=current.get("wind_direction_10m"),
+            precipitation_mm=current.get("precipitation"),
+            uv_index=uv_index,
+            cloud_cover_pct=current.get("cloud_cover"),
+            visibility_km=None,
+            weather_code=current.get("weather_code"),
+            measured_at=measured_at,
+            is_estimated=False,
+        )
+
     def _parse_openweather_response(self, data: dict) -> WeatherReadingCreate:
         """Parse OpenWeatherMap API response into our schema."""
         main = data.get("main", {})
         wind = data.get("wind", {})
         weather = data.get("weather", [{}])[0]
         clouds = data.get("clouds", {})
-        sys = data.get("sys", {})
 
         # Extract measurement time (use current time if not available)
         dt = data.get("dt")
@@ -156,6 +224,17 @@ class WeatherService:
         weather_id = weather.get("id", 0)
         wmo_code = self._map_owm_to_wmo(weather_id)
 
+        rain_mm = (data.get("rain") or {}).get("1h")
+        snow_mm = (data.get("snow") or {}).get("1h")
+        precip = rain_mm if rain_mm is not None else snow_mm
+
+        visibility_m = data.get("visibility")
+        visibility_km = round(visibility_m / 1000.0, 1) if visibility_m is not None else None
+
+        wind_deg = wind.get("deg")
+        if wind_deg is not None:
+            wind_deg = int(round(wind_deg)) % 361
+
         return WeatherReadingCreate(
             location_id=UUID(int=0),  # Will be set by caller
             provider="OpenWeatherMap",
@@ -163,11 +242,11 @@ class WeatherService:
             humidity_pct=main.get("humidity"),
             pressure_hpa=main.get("pressure"),
             wind_speed_ms=wind.get("speed"),
-            wind_direction_deg=wind.get("deg"),
-            precipitation_mm=None,  # Not in current weather, would need OneCall API
-            uv_index=None,  # Not in current weather, would need OneCall API
+            wind_direction_deg=wind_deg,
+            precipitation_mm=precip,
+            uv_index=None,  # Not in OWM /weather endpoint
             cloud_cover_pct=clouds.get("all"),
-            visibility_km=data.get("visibility", 0) / 1000 if data.get("visibility") else None,
+            visibility_km=visibility_km,
             weather_code=wmo_code,
             measured_at=measured_at,
             is_estimated=False,
@@ -218,8 +297,7 @@ class WeatherService:
         return 0  # Default to clear
 
     async def sync_location_data(self, location_id: UUID) -> bool:
-        """Sync weather data for a location from OpenWeatherMap."""
-        # Get location details
+        """Sync weather data for a location (OpenWeatherMap primary, Open-Meteo fallback)."""
         result = await self.session.execute(
             select(LocationModel).where(LocationModel.id == location_id)
         )
@@ -227,18 +305,30 @@ class WeatherService:
         if not location:
             raise ValueError(f"Location {location_id} not found")
 
-        # Fetch from OpenWeatherMap
-        reading = await self.fetch_from_openweather(
-            float(location.latitude),
-            float(location.longitude),
+        lat = float(location.latitude)
+        lon = float(location.longitude)
+        reading: Optional[WeatherReadingCreate] = None
+
+        try:
+            reading = await self.fetch_from_openweather(lat, lon)
+        except Exception as exc:
+            logger.warning("OpenWeatherMap failed for (%s, %s), falling back to Open-Meteo: %s", lat, lon, exc)
+            reading = await self.fetch_from_openmeteo(lat, lon)
+
+        if not reading:
+            return False
+
+        reading.location_id = location_id
+        existing = await self.session.execute(
+            select(WeatherReadingModel.id).where(
+                WeatherReadingModel.location_id == location_id,
+                WeatherReadingModel.provider == reading.provider,
+                WeatherReadingModel.measured_at == reading.measured_at,
+            ).limit(1)
         )
-
-        if reading:
-            reading.location_id = location_id
+        if existing.scalar_one_or_none() is None:
             await self.create_reading(reading)
-            return True
-
-        return False
+        return True
 
     def get_weather_info(self, weather_code: Optional[int], uv_index: Optional[float]) -> dict:
         """Get weather description and UV advisory."""

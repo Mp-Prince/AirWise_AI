@@ -1,16 +1,47 @@
-import { Link, useLocation } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../app/providers/AuthProvider.jsx';
+import environmentalApi from '../../services/environmentalApi.js';
 import NAV_ITEMS from './navItems.js';
 
 /**
  * Mobile/tablet top navbar.
- * Global header displays: selected city, data freshness, notifications,
- * profile menu (UI/UX spec section 5). Location/freshness become real
- * once Phase 3 wires environmental data; placeholders are labelled.
+ * Global header displays: selected city, notifications, profile menu.
  */
 export default function TopNavbar() {
   const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+  const [defaultLocation, setDefaultLocation] = useState(null);
+
   const currentLabel =
     NAV_ITEMS.find((i) => pathname.startsWith(i.to))?.label ?? 'AirWise AI';
+
+  useEffect(() => {
+    let active = true;
+    if (!user) {
+      setDefaultLocation(null);
+      return undefined;
+    }
+    environmentalApi
+      .getLocations()
+      .then((res) => {
+        if (!active) return;
+        const locs = res?.locations || [];
+        setDefaultLocation(locs.find((l) => l.is_default) || locs[0] || null);
+      })
+      .catch(() => {
+        if (active) setDefaultLocation(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [user, pathname]);
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
 
   return (
     <header className="aw-topbar navbar sticky-top px-3 py-2">
@@ -30,10 +61,14 @@ export default function TopNavbar() {
         <span className="text-supporting d-none d-lg-inline ms-2">{currentLabel}</span>
 
         <div className="ms-auto d-flex align-items-center gap-2">
-          <span className="badge text-bg-light border d-none d-sm-inline">
+          <Link
+            to="/profile"
+            className="badge text-bg-light border text-decoration-none d-none d-sm-inline"
+            title="Manage saved locations"
+          >
             <i className="bi bi-geo-alt me-1" aria-hidden="true" />
-            Location not set
-          </span>
+            {defaultLocation ? (defaultLocation.city || defaultLocation.name) : 'Location not set'}
+          </Link>
           <button className="btn btn-light position-relative" aria-label="Notifications">
             <i className="bi bi-bell" aria-hidden="true" />
           </button>
@@ -55,11 +90,19 @@ export default function TopNavbar() {
               <li>
                 <hr className="dropdown-divider" />
               </li>
-              <li>
-                <Link className="dropdown-item" to="/login">
-                  Log in
-                </Link>
-              </li>
+              {user ? (
+                <li>
+                  <button type="button" className="dropdown-item text-danger" onClick={handleLogout}>
+                    Log out
+                  </button>
+                </li>
+              ) : (
+                <li>
+                  <Link className="dropdown-item" to="/login">
+                    Log in
+                  </Link>
+                </li>
+              )}
             </ul>
           </div>
         </div>

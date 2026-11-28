@@ -63,10 +63,6 @@ export default function ProfilePage() {
 
       const locRes = await environmentalApi.getLocations();
       setLocations(locRes.locations || []);
-      const defaultLoc = locRes.locations?.find(l => l.is_default);
-      if (defaultLoc) {
-        setSelectedLocation(defaultLoc);
-      }
     } catch (err) {
       if (err.response?.status === 404) {
         setProfile(null);
@@ -101,10 +97,10 @@ export default function ProfilePage() {
     setSuccess(false);
     try {
       const apiData = {
-        full_name: formData.full_name,
-        date_of_birth: formData.date_of_birth || null,
+        full_name: formData.full_name.trim() || user?.email?.split('@')[0] || 'AirWise User',
+        date_of_birth: formData.date_of_birth ? `${formData.date_of_birth}T00:00:00Z` : null,
         gender: formData.gender || null,
-        height_cm: formData.height_cm ? parseInt(formData.height_cm) : null,
+        height_cm: formData.height_cm ? parseInt(formData.height_cm, 10) : null,
         weight_kg: formData.weight_kg ? parseFloat(formData.weight_kg) : null,
         health_conditions: formData.health_conditions,
         sensitivities: formData.sensitivities,
@@ -122,7 +118,12 @@ export default function ProfilePage() {
       await loadData();
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to save profile');
+      const detail = err.response?.data?.detail;
+      setError(
+        Array.isArray(detail)
+          ? detail.map((d) => d.msg).join(', ')
+          : detail || 'Failed to save profile',
+      );
     } finally {
       setSaving(false);
     }
@@ -136,8 +137,9 @@ export default function ProfilePage() {
     setSaving(true);
     setError(null);
     try {
+      const rawName = selectedLocation.name || selectedLocation.display_name || 'Saved Location';
       const locationData = {
-        name: selectedLocation.name || selectedLocation.display_name,
+        name: rawName.slice(0, 100),
         lat: selectedLocation.lat,
         lon: selectedLocation.lon,
         city: selectedLocation.city,
@@ -146,11 +148,17 @@ export default function ProfilePage() {
         is_default: true,
       };
       await environmentalApi.createLocation(locationData);
+      setSelectedLocation(null);
       await loadData();
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to save location');
+      const detail = err.response?.data?.detail;
+      setError(
+        Array.isArray(detail)
+          ? detail.map((d) => d.msg).join(', ')
+          : detail || 'Failed to save location',
+      );
     } finally {
       setSaving(false);
     }
@@ -213,7 +221,7 @@ export default function ProfilePage() {
       {error && <ErrorAlert message={error} onDismiss={() => setError(null)} />}
       {success && (
         <div className="alert alert-success alert-dismissible fade show mb-3" role="alert">
-          <svg className="bi me-1" width="16" height="16"><use xlinkHref="#check-circle" /></svg>
+          <i className="bi bi-check-circle me-1" aria-hidden="true" />
           Saved successfully!
           <button type="button" className="btn-close" onClick={() => setSuccess(false)} aria-label="Close" />
         </div>
@@ -231,7 +239,7 @@ export default function ProfilePage() {
                   aria-selected={activeTab === tab.id}
                   onClick={() => setActiveTab(tab.id)}
                 >
-                  <svg className="bi me-1" width="16" height="16"><use xlinkHref={`#${tab.icon}`} /></svg>
+                  <i className={`bi bi-${tab.icon} me-1`} aria-hidden="true" />
                   {tab.label}
                 </button>
               </li>
